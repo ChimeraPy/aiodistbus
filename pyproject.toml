@@ -1,0 +1,80 @@
+
+[project]
+name = "aiodistbus"
+version = "0.0.1"
+description = "ZeroMQ Distributed EventBus: "
+authors = [
+    {name = "Eduardo Davalos", email="eduardo.davalos.anaya@vanderbilt.edu"},
+    {name = "Umesh Timalsina", email="umesh.timalsina@vanderbilt.edu"}
+]
+license = {file = "LICENSE.txt"}
+readme = "README.md"
+requires-python = ">3.6"
+
+keywords = ["event", "bus", "distributed", "observer", "zeromq"]
+
+classifiers = [
+    "Programming Language :: Python :: 3"
+]
+
+dependencies = [
+    'asyncio-atexit',
+    'pyzmq',
+    'dataclasses-json',
+    'aioreactive',
+]
+
+[project.optional-dependencies]
+test = [
+    'pytest',
+    'pytest-asyncio',
+    'pytest-repeat',
+    'pytest-lazy-fixture',
+    'auto-changelog',
+    'coveralls',
+    'pre-commit',
+    'bump2version'
+]
+
+[project.urls]
+homepath = "https://github.com/ChimeraPy/aiodistbus"
+repository = "https://github.com/ChimeraPy/aiodistbus"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.mypy]
+files = "aiodistbus"
+ignore_missing_imports = true
+
+[tool.ruff]
+ignore = ["E501"]
+select = ["E", "W", "F", "C", "B", "I"]
+ignore-init-module-imports = true
+fixable = ["I001"]  # isort fix only
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["E402", "F401"]
+"chimerapy/pipelines/__version__.py" = ["E402"]
+
+# Reference:
+# https://stackoverflow.com/questions/4673373/logging-within-pytest-tests
+
+[tool.pytest.ini_options]
+asyncio_mode = 'auto'
+
+# Logging + CLI
+log_cli = true
+log_cli_level = "DEBUG"
+log_cli_format = "%(asctime)s.%(msecs)03d [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+
+# Timeout
+faulthandler_timeout=300
+
+# Ignore warnings
+filterwarnings = "ignore::DeprecationWarning"
