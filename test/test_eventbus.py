@@ -19,7 +19,7 @@ async def handler(event: ExampleEvent):
     logger.info(f"Received event {event}")
 
 @pytest.fixture
-async def bus():
+async def lbus():
     bus = EventBus()
     await bus.aserve()
     yield bus
@@ -35,14 +35,16 @@ async def test_local_eventbus(bus):
     await entry1.on("test", handler, ExampleEvent)
     
     # Connect
-    await entry1.local_subscribe(bus)
-    await entry2.local_subscribe(bus)
+    await entry1.connect(bus)
+    await entry2.connect(bus)
 
     # Send message
     event = await entry2.emit("test", ExampleEvent("Hello"))
 
     # Assert
     assert event.id in entry1._received
+    await entry1.close()
+    await entry2.close()
 
 async def test_remote_eventbus(bus):
     

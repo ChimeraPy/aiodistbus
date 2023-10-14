@@ -1,5 +1,8 @@
+import abc
 from dataclasses import dataclass
 from typing import Dict, List, Literal, Type
+
+import zmq
 
 from .protocols import Event, OnHandler
 from .utils import get_ip_address
@@ -7,23 +10,52 @@ from .utils import get_ip_address
 @dataclass
 class Subscription:
     entrypoint: str
-    mode: Literal['local', 'remote']
     event_type: str
     dataclass: Type["T"]
 
 
-class EventBus():
+class AEventBus(abc.ABC):
     
-    def __init__(self,  port: int = 0):
+    def __init__(self):
 
         # State information
-        self._ip: str = get_ip_address()
-        self._port: int = port
         self._routes: Dict[str, List[Subscription]] = {}
 
+    @abc.abstractmethod
     async def aserve(self):
         ...
+    
+    @abc.abstractmethod
+    async def extend(self, event_type: str):
+        ...
 
+    @abc.abstractmethod
+    async def close(self):
+        ...
+
+
+class DEventBus():
+
+    def __init__(self, port: int):
+
+        # Parameters
+        self.ctx = zmq.asyncio.Context()
+        self._ip: str = get_ip_address()
+        self._port: int = port
+
+        # Set up clone server sockets
+        self.snapshot  = self.ctx.socket(zmq.ROUTER)
+        self.publisher = self.ctx.socket(zmq.PUB)
+        self.collector = self.ctx.socket(zmq.PULL)
+        self.snapshot.bind("tcp://*:%d" % self.port)
+        self.publisher.bind("tcp://*:%d" % (self.port + 1))
+        self.collector.bind("tcp://*:%d" % (self.port + 2))
+
+        # Register our handlers with reactor
+        self.snapshot.on_recv(self.handle_snapshot)
+        self.collector.on_recv(self.handle_collect)
+        self.flush_callback = PeriodicCallback(self.flush_ttl, 1000)
+    
     @property
     def ip(self):
         return self._ip
@@ -32,25 +64,6 @@ class EventBus():
     def port(self):
         return self._port
 
-    async def emit(self, event: Event):
-        ...
 
-    # def filter_handlers(self, event_type: str, handlers: Dict[str,OnHandler]) -> List[OnHandler]:
-    #     filtered_handlers: List[OnHandler] = []
-
-    #     topics = event_type.split("/")
-    #     for handler in handlers.values():
-    #         handler_topics = handler.event_type.split("/")
-
-    #         # Support for wildcards (*)
-    #         for topic, handler_topic in zip(topics, handler_topics):
-    #             if handler_topic == "*":
-    #                 filtered_handlers.append(handler)
-    #                 break
-    #             if handler_topic != topic:
-    #                 break
-
-    #     return filtered_handlers
-
-    async def close(self):
-        ...
+class EventBus():
+    ...
