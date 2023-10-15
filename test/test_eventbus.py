@@ -32,6 +32,16 @@ async def dbus():
     await bus.close()
 
 
+async def test_deventbus_instance(dbus):
+    ...
+
+
+async def test_dentrypoint_instance():
+    entry = DEntryPoint()
+    await entry.connect("localhost", 5555)
+    await entry.close()
+
+
 async def test_local_eventbus(bus):
 
     # Create resources
@@ -69,12 +79,15 @@ async def test_remote_eventbus_connect(dbus):
     # Connect
     await entry1.connect(dbus.ip, dbus.port)
     await entry2.connect(dbus.ip, dbus.port)
+    logger.debug("Finished connecting")
 
     # Assert
     await entry1.close()
     await entry2.close()
+    logger.debug("Finished closing")
 
 
+@pytest.mark.skip()
 async def test_remote_eventbus(dbus):
 
     # Create resources

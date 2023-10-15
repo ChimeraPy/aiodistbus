@@ -1,16 +1,14 @@
 import asyncio
-from typing import (
-    Any,
-    Callable,
-    Optional,
-    Type,
-)
+import logging
+from typing import Any, Callable, Dict, Optional, Type
 
 import zmq
 import zmq.asyncio
 
 from ..protocols import Event, OnHandler
 from .aentrypoint import AEntryPoint
+
+logger = logging.getLogger(__name__)
 
 
 class DEntryPoint(AEntryPoint):
@@ -25,14 +23,20 @@ class DEntryPoint(AEntryPoint):
         self.publisher: Optional[zmq.asyncio.Socket] = None
 
     async def _run(self):
-        await asyncio.gather(
-            self._subscriber_reactor(),
-        )
-
-    async def _subscriber_reactor(self):
         assert self.subscriber, "Subscriber socket not initialized"
+
         while self._running:
-            [topic, msg] = await self.subscriber.recv()
+            # [topic, msg] = await self.subscriber.recv()
+            event_list = await self.poller.poll(timeout=10)
+            events = dict(event_list)
+
+            # Empty if no events
+            if len(events) == 0:
+                continue
+
+            for s in events:
+                data = await s.recv()
+                logger.debug(data)
 
     async def _update_handlers(self):
         ...
@@ -53,7 +57,6 @@ class DEntryPoint(AEntryPoint):
 
     async def connect(self, ip: str, port: int):
 
-        self._running = True
         self.ctx = zmq.asyncio.Context()
         self.snapshot = self.ctx.socket(zmq.DEALER)
         self.snapshot.connect("tcp://%s:%d" % (ip, port))
@@ -62,6 +65,11 @@ class DEntryPoint(AEntryPoint):
         self.publisher = self.ctx.socket(zmq.PUSH)
         self.publisher.connect("tcp://%s:%d" % (ip, port + 2))
 
+        # Using a poller for the subscriber
+        self.poller = zmq.asyncio.Poller()
+        self.poller.register(self.subscriber, zmq.POLLIN)
+
+        self._running = True
         self.run_task = asyncio.create_task(self._run())
 
     async def close(self):
