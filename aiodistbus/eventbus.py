@@ -1,8 +1,9 @@
-import abc
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, List, Literal, Type
 
 import zmq
+import zmq.asyncio
 
 from .protocols import Event, OnHandler
 from .utils import get_ip_address
@@ -11,25 +12,30 @@ from .utils import get_ip_address
 class Subscription:
     entrypoint: str
     event_type: str
-    dataclass: Type["T"]
+    dataclass: Type
 
 
-class AEventBus(abc.ABC):
+class AEventBus(ABC):
     
     def __init__(self):
 
         # State information
-        self._routes: Dict[str, List[Subscription]] = {}
+        self._running = False
+        self._subscriptions: Dict[str, List[Subscription]] = {}
 
-    @abc.abstractmethod
-    async def aserve(self):
+    @property
+    def running(self):
+        return self._running
+
+    @abstractmethod
+    async def emit(self, event: Event):
         ...
-    
-    @abc.abstractmethod
+
+    @abstractmethod
     async def extend(self, event_type: str):
         ...
 
-    @abc.abstractmethod
+    # @abstractmethod
     async def close(self):
         ...
 
@@ -50,11 +56,6 @@ class DEventBus():
         self.snapshot.bind("tcp://*:%d" % self.port)
         self.publisher.bind("tcp://*:%d" % (self.port + 1))
         self.collector.bind("tcp://*:%d" % (self.port + 2))
-
-        # Register our handlers with reactor
-        self.snapshot.on_recv(self.handle_snapshot)
-        self.collector.on_recv(self.handle_collect)
-        self.flush_callback = PeriodicCallback(self.flush_ttl, 1000)
     
     @property
     def ip(self):
@@ -66,4 +67,14 @@ class DEventBus():
 
 
 class EventBus():
-    ...
+
+    def __init__(self):
+        super().__init__()
+        self._running = True
+
+    async def emit(self):
+        # Get subscriptions based on event type
+        ...
+    
+    async def close(self):
+        ...

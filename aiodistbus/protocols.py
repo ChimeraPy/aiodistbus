@@ -14,4 +14,4 @@ class Event:
 class OnHandler:
     event_type: str
     handler: Union[Callable, Coroutine]
-    dataclass: Type["T"]
+    dataclass: Type

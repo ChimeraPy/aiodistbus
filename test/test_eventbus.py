@@ -19,17 +19,16 @@ async def handler(event: ExampleEvent):
     logger.info(f"Received event {event}")
 
 @pytest.fixture
-async def lbus():
+async def bus():
     bus = EventBus()
-    await bus.aserve()
     yield bus
     await bus.close()
 
 async def test_local_eventbus(bus):
    
     # Create resources
-    entry1 = EntryPoint("entry1")
-    entry2 = EntryPoint("entry2")
+    entry1 = EntryPoint()
+    entry2 = EntryPoint()
     
     # Add handlers
     await entry1.on("test", handler, ExampleEvent)
