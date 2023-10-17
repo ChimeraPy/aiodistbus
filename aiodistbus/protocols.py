@@ -1,11 +1,13 @@
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable, Coroutine, Optional, Type, Union
+from typing import Any, Callable, Coroutine, Dict, Optional, Type, Union
+
+from dataclasses_json import DataClassJsonMixin
 
 
 @dataclass
-class Event:
+class Event(DataClassJsonMixin):
     type: str
     data: Optional[Any] = None
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
