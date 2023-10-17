@@ -85,7 +85,7 @@ async def test_remote_eventbus_connect(dbus):
     await entry2.close()
 
 
-async def test_remote_eventbus(dbus):
+async def test_remote_eventbus_emit(dbus):
 
     # Create resources
     entry1 = DEntryPoint()

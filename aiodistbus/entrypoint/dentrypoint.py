@@ -116,4 +116,4 @@ class DEntryPoint(AEntryPoint):
             if self.publisher:
                 self.publisher.close()
 
-        self.ctx.term()
+            self.ctx.term()

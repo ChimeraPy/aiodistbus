@@ -1,8 +1,10 @@
-from ._log import setup
+from ._log import setup as setup_log
+from ._loop import setup as setup_loop
 from .entrypoint import DEntryPoint, EntryPoint
 from .eventbus import DEventBus, EventBus
 
-setup()
+setup_log()
+setup_loop()
 
 __all__ = [
     "EventBus",
