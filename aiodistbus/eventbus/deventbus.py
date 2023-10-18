@@ -51,8 +51,9 @@ class DEventBus:
     async def _snapshot_reactor(self, id: str, msg: bytes):
         logger.debug(f"ROUTER: Received {id}: {msg}")
 
-    async def _collector_reactor(self, msg: bytes):
-        logger.debug(f"COLLECTOR: Received {msg}")
+    async def _collector_reactor(self, topic: bytes, msg: bytes):
+        logger.debug(f"COLLECTOR: Received {topic} - {msg}")
+        await self.publisher.send_multipart([topic, msg])
 
     async def _run(self):
         while self._running:
@@ -69,8 +70,8 @@ class DEventBus:
                 await self._snapshot_reactor(id.decode(), msg)
 
             if self.collector in events:
-                msg = await self.collector.recv_multipart()
-                await self._collector_reactor(msg)
+                [topic, data] = await self.collector.recv_multipart()
+                await self._collector_reactor(topic, data)
 
     ####################################################################
     ## Front-Facing API

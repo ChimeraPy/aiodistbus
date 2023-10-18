@@ -40,21 +40,18 @@ class DEntryPoint(AEntryPoint):
                 continue
 
             for s in events:
-                data = await s.recv()
-                logger.debug(data)
+                data = await s.recv_multipart()
+                logger.debug(f"SUBSCRIBER: Received {data}")
 
     async def _update_handlers(self, event_type: Optional[str] = None):
-        if not self.snapshot:
+        if not self.subscriber:
             return
 
         if event_type:
-            msg = Message("SUBSCRIBE", SubscribeData(event_type=[event_type]))
-            await self.snapshot.send(msg.to_json().encode())
+            self.subscriber.setsockopt(zmq.SUBSCRIBE, event_type.encode("utf-8"))
         else:
-            msg = Message(
-                "SUBSCRIBE", SubscribeData(event_type=list(self._handlers.keys()))
-            )
-            await self.snapshot.send(msg.to_json().encode())
+            for event_type in self._handlers.keys():
+                self.subscriber.setsockopt(zmq.SUBSCRIBE, event_type.encode("utf-8"))
 
     ####################################################################
     ## Front-Facing API
@@ -66,13 +63,12 @@ class DEntryPoint(AEntryPoint):
         self._handlers[event_type] = on_handler
         await self._update_handlers(event_type)
 
-    async def emit(self, event_type: str, data: Any) -> Optional[Event]:
+    async def emit(self, event_type: str, data: bytes) -> Optional[Event]:
         if not self.snapshot or not self.publisher:
             logger.warning("Not connected to server")
             return None
 
-        msg = Message("EVENT", Event(event_type, data))
-        await self.publisher.send(msg.to_json().encode())
+        await self.publisher.send_multipart([event_type.encode("utf-8"), data])
         event = Event(event_type, data)
         return event
 
@@ -91,11 +87,11 @@ class DEntryPoint(AEntryPoint):
         # Keeping track of state
         self._running = True
 
-        # First, use snapshot to connect
-        await self.snapshot.send(Message("CONNECT", {}).to_json().encode())
-
-        # Then, inform server the type of events we want to listen to
+        # Update the subscriber's topics
         await self._update_handlers()
+
+        # First, use snapshot to connect
+        await self.snapshot.send("CONNECT".encode())
 
         # Using a poller for the subscriber
         self.poller = zmq.asyncio.Poller()
@@ -109,7 +105,7 @@ class DEntryPoint(AEntryPoint):
             if self.run_task:
                 await self.run_task
             if self.snapshot:
-                await self.snapshot.send(Message("DISCONNECT", {}).to_json().encode())
+                await self.snapshot.send("DISCONNECT".encode())
                 self.snapshot.close()
             if self.subscriber:
                 self.subscriber.close()

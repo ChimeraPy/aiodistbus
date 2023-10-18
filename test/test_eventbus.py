@@ -1,8 +1,8 @@
 import logging
 from dataclasses import dataclass
-from typing import Any
 
 import pytest
+from dataclasses_json import DataClassJsonMixin
 
 from aiodistbus import DEntryPoint, DEventBus, EntryPoint, EventBus
 
@@ -10,7 +10,7 @@ logger = logging.getLogger("aiodistbus")
 
 
 @dataclass
-class ExampleEvent:
+class ExampleEvent(DataClassJsonMixin):
     msg: str
 
 
@@ -99,7 +99,7 @@ async def test_remote_eventbus_emit(dbus):
     await entry2.connect(dbus.ip, dbus.port)
 
     # Send message
-    event = await entry2.emit("test", ExampleEvent("Hello"))
+    event = await entry2.emit("test", ExampleEvent("Hello").to_json().encode())
 
     # Assert
     # assert event.id in entry1._received
