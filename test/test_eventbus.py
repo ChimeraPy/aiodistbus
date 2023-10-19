@@ -36,9 +36,9 @@ async def test_deventbus_instance(dbus):
     ...
 
 
-async def test_dentrypoint_instance():
+async def test_dentrypoint_instance(dbus):
     entry = DEntryPoint()
-    await entry.connect("localhost", 5555)
+    await entry.connect(dbus.ip, dbus.port)
     await entry.close()
 
 

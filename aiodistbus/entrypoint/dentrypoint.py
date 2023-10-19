@@ -68,8 +68,8 @@ class DEntryPoint(AEntryPoint):
             logger.warning("Not connected to server")
             return None
 
-        await self.publisher.send_multipart([event_type.encode("utf-8"), data])
         event = Event(event_type, data)
+        await self.publisher.send_multipart([event_type.encode("utf-8"), event.to_json().encode()])
         return event
 
     async def connect(self, ip: str, port: int):
