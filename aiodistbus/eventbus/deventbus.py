@@ -36,6 +36,8 @@ class DEventBus:
         self.poller.register(self.collector, zmq.POLLIN)
 
         self._running = True
+        self._flush_flag = asyncio.Event()
+        self._flush_flag.clear()
         self.run_task = asyncio.create_task(self._run())
 
         asyncio_atexit.register(self.close)
@@ -49,10 +51,11 @@ class DEventBus:
         return self._port
 
     async def _snapshot_reactor(self, id: str, msg: bytes):
-        logger.debug(f"ROUTER: Received {id}: {msg}")
+        ...
+        # logger.debug(f"ROUTER: Received {id}: {msg}")
 
     async def _collector_reactor(self, topic: bytes, msg: bytes):
-        logger.debug(f"COLLECTOR: Received {topic} - {msg}")
+        # logger.debug(f"COLLECTOR: Received {topic} - {msg}")
         await self.publisher.send_multipart([topic, msg])
 
     async def _run(self):
@@ -63,6 +66,7 @@ class DEventBus:
 
             # Empty if no events
             if len(events) == 0:
+                self._flush_flag.set()
                 continue
 
             if self.snapshot in events:
@@ -76,6 +80,10 @@ class DEventBus:
     ####################################################################
     ## Front-Facing API
     ####################################################################
+
+    async def flush(self):
+        self._flush_flag.clear()
+        await self._flush_flag.wait()
 
     async def close(self):
 

@@ -20,6 +20,7 @@ class AEntryPoint(ABC):
         # State information
         self.id = str(uuid.uuid4())
         self._handlers: Dict[str, OnHandler] = {}
+        self._wildcards: Dict[str, OnHandler] = {}
         self._received: deque[str] = deque(maxlen=10)
 
     def _wrapper(self, handler: Callable) -> Callable:

@@ -18,11 +18,20 @@ class EntryPoint(AEntryPoint):
         self.block = block
         self._bus: Optional[EventBus] = None
 
-    async def _update_handlers(self):
+    async def _update_handlers(self, event_type: Optional[str] = None):
         if self._bus is None:
             return
-        for handler in self._handlers.values():
-            await self._bus._on(self.id, handler)
+
+        if event_type:
+            if event_type in self._handlers:
+                await self._bus._on(self.id, self._handlers[event_type])
+            elif event_type in self._wildcards:
+                await self._bus._on(self.id, self._wildcards[event_type])
+        else:
+            for handler in self._handlers.values():
+                await self._bus._on(self.id, handler)
+            for handler in self._wildcards.values():
+                await self._bus._on(self.id, handler)
 
     ####################################################################################################################
     ## PUBLIC API
@@ -32,11 +41,19 @@ class EntryPoint(AEntryPoint):
         self._bus = bus
         await self._update_handlers()
 
-    async def on(self, event_type: str, handler: Callable, dataclass: Type):
+    async def on(
+        self, event_type: str, handler: Callable, dataclass: Optional[Type] = None
+    ):
         wrapped_handler = self._wrapper(handler)
         on_handler = OnHandler(event_type, wrapped_handler, dataclass)
-        self._handlers[event_type] = on_handler
-        await self._update_handlers()
+
+        # Track handlers (supporting wildcards)
+        if "*" not in event_type:
+            self._handlers[event_type] = on_handler
+        else:
+            self._wildcards[event_type] = on_handler
+
+        await self._update_handlers(event_type)
 
     async def emit(self, event_type: str, data: Any) -> Event:
         event = Event(event_type, data)

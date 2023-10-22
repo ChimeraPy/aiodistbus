@@ -18,7 +18,7 @@ class Event(DataClassJsonMixin):
 class OnHandler:
     event_type: str
     handler: Union[Callable]
-    dataclass: Type
+    dataclass: Optional[Type] = None
 
 
 @dataclass

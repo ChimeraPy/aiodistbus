@@ -6,8 +6,8 @@ from typing import Any, Callable, Dict, Optional, Type
 import asyncio_atexit
 import zmq
 import zmq.asyncio
+from dataclasses_json import DataClassJsonMixin
 
-from ..messages import Message, SubscribeData
 from ..protocols import Event, OnHandler
 from .aentrypoint import AEntryPoint
 
@@ -40,8 +40,38 @@ class DEntryPoint(AEntryPoint):
                 continue
 
             for s in events:
-                data = await s.recv_multipart()
-                logger.debug(f"SUBSCRIBER: Received {data}")
+                [topic, event] = await s.recv_multipart()
+                topic = topic.decode("utf-8")
+                event = event.decode("utf-8")
+
+                # With the data, use the handler
+                if topic in self._handlers:
+
+                    # Reconstruct the data
+                    dataclass = self._handlers[topic].dataclass
+                    event = Event.from_json(event)
+                    if dataclass:
+                        event.data = dataclass(**event.data)
+
+                    # Pass through the handler
+                    handler = self._handlers[topic].handler
+                    await handler(event)
+
+                # Check for wildcards
+                for wildcard in self._wildcards:
+                    for i, j in zip(topic.split("."), wildcard.split(".")):
+                        if j == "*":
+
+                            # Reconstruct the data (if needed)
+                            if not isinstance(event, Event):
+                                event = Event.from_json(event)
+
+                            # Pass through the handler
+                            handler = self._wildcards[wildcard].handler
+                            await handler(event)
+                            break
+                        if i != j:
+                            break
 
     async def _update_handlers(self, event_type: Optional[str] = None):
         if not self.subscriber:
@@ -49,27 +79,39 @@ class DEntryPoint(AEntryPoint):
 
         if event_type:
             self.subscriber.setsockopt(zmq.SUBSCRIBE, event_type.encode("utf-8"))
+            # logger.debug("SUBSCRIBER: Subscribed to %s", event_type)
         else:
             for event_type in self._handlers.keys():
                 self.subscriber.setsockopt(zmq.SUBSCRIBE, event_type.encode("utf-8"))
+                # logger.debug("SUBSCRIBER: Subscribed to %s", event_type)
 
     ####################################################################
     ## Front-Facing API
     ####################################################################
 
-    async def on(self, event_type: str, handler: Callable, dataclass: Type):
+    async def on(
+        self, event_type: str, handler: Callable, dataclass: Optional[Type] = None
+    ):
         wrapped_handler = self._wrapper(handler)
         on_handler = OnHandler(event_type, wrapped_handler, dataclass)
-        self._handlers[event_type] = on_handler
+
+        # Track handlers (supporting wildcards)
+        if "*" not in event_type:
+            self._handlers[event_type] = on_handler
+        else:
+            self._wildcards[event_type] = on_handler
+
         await self._update_handlers(event_type)
 
-    async def emit(self, event_type: str, data: bytes) -> Optional[Event]:
+    async def emit(self, event_type: str, data: DataClassJsonMixin) -> Optional[Event]:
         if not self.snapshot or not self.publisher:
             logger.warning("Not connected to server")
             return None
 
         event = Event(event_type, data)
-        await self.publisher.send_multipart([event_type.encode("utf-8"), event.to_json().encode()])
+        await self.publisher.send_multipart(
+            [event_type.encode("utf-8"), event.to_json().encode()]
+        )
         return event
 
     async def connect(self, ip: str, port: int):
