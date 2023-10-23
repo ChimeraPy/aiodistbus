@@ -18,16 +18,20 @@ class AEventBus(ABC):
     def running(self):
         return self._running
 
-    # @abstractmethod
+    @abstractmethod
     async def _on(self, event_type: str, dtype: Type):
         ...
 
-    # @abstractmethod
+    @abstractmethod
     async def _emit(self, event: Event):
         ...
 
+    @abstractmethod
+    async def forward(self, event_type: str):
+        ...
+
     # @abstractmethod
-    async def extend(self, event_type: str):
+    async def deforward(self, event_type: str):
         ...
 
     @abstractmethod

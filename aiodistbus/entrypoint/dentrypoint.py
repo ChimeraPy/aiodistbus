@@ -1,8 +1,6 @@
 import asyncio
-import json
 import logging
-from dataclasses import dataclass
-from typing import Any, Callable, Dict, Optional, Type
+from typing import Any, Callable, Optional, Type
 
 import asyncio_atexit
 import zmq
@@ -71,22 +69,25 @@ class DEntryPoint(AEntryPoint):
                     handler = self._handlers[topic].handler
                     await handler(event)
 
-                # Check for wildcards
-                for wildcard in self._wildcards:
-                    for i, j in zip(topic.split("."), wildcard.split(".")):
-                        if j == "*":
+                # Certain meta events do not get captured by wilcard subscriptions
+                elif topic not in ["eventbus.close"]:
 
-                            # Reconstruct the data (if needed)
-                            if not isinstance(event, Event):
-                                event = Event.from_json(event)
-                                event.data = bytes(event.data)
+                    # Check for wildcards
+                    for wildcard in self._wildcards:
+                        for i, j in zip(topic.split("."), wildcard.split(".")):
+                            if j == "*":
 
-                            # Pass through the handler
-                            handler = self._wildcards[wildcard].handler
-                            await handler(event)
-                            break
-                        if i != j:
-                            break
+                                # Reconstruct the data (if needed)
+                                if not isinstance(event, Event):
+                                    event = Event.from_json(event)
+                                    event.data = bytes(event.data)
+
+                                # Pass through the handler
+                                handler = self._wildcards[wildcard].handler
+                                await handler(event)
+                                break
+                            if i != j:
+                                break
 
     async def _update_handlers(self, event_type: Optional[str] = None):
         if not self.subscriber:
@@ -126,7 +127,9 @@ class DEntryPoint(AEntryPoint):
 
         await self._update_handlers(event_type)
 
-    async def emit(self, event_type: str, data: Any) -> Optional[Event]:
+    async def emit(
+        self, event_type: str, data: Any, id: Optional[str] = None
+    ) -> Optional[Event]:
         if not self.snapshot or not self.publisher:
             logger.warning("Not connected to server")
             return None
@@ -143,10 +146,18 @@ class DEntryPoint(AEntryPoint):
         data = encoder(data)
 
         # Send the data
-        event = Event(event_type, data)
-        await self.publisher.send_multipart(
-            [event_type.encode("utf-8"), event.to_json().encode()]
-        )
+        if id:
+            event = Event(event_type, data, id=id)
+        else:
+            event = Event(event_type, data)
+        logger.debug(f"PUBLISHER: {event}")
+        try:
+            await self.publisher.send_multipart(
+                [event_type.encode("utf-8"), event.to_json().encode()]
+            )
+        except zmq.error.ZMQError:
+            logger.error("Could not send event")
+            return None
         return event
 
     async def connect(self, ip: str, port: int):

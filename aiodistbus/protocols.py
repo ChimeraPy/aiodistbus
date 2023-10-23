@@ -1,7 +1,7 @@
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable, Coroutine, Dict, Optional, Type, Union
+from typing import Any, Callable, Optional, Type
 
 from dataclasses_json import DataClassJsonMixin
 
@@ -17,7 +17,7 @@ class Event(DataClassJsonMixin):
 @dataclass
 class OnHandler:
     event_type: str
-    handler: Union[Callable]
+    handler: Callable
     dtype: Optional[Type] = None
 
 

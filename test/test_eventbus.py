@@ -237,3 +237,29 @@ async def test_remote_eventbus_emit_wildcard(dbus, dentrypoints):
     # Assert
     assert event1 and event1.id not in e1._received
     assert event2 and event2.id in e1._received
+
+
+async def test_bridge_bus_to_dbus(bus, dbus, entrypoints, dentrypoints):
+
+    # Create resources
+    e1, _ = entrypoints
+    de1, _ = dentrypoints
+
+    # Add handlers
+    await de1.on("test", handler, ExampleEvent)
+
+    # Connect entrypoint to bus
+    await e1.connect(bus)
+    await de1.connect(dbus.ip, dbus.port)
+
+    # Bridge
+    await bus.forward(dbus.ip, dbus.port)
+
+    # Send message
+    event = await e1.emit("test", ExampleEvent("Hello"))
+
+    # Need to flush
+    await dbus.flush()
+
+    # Assert
+    assert event.id in de1._received

@@ -59,8 +59,14 @@ class EntryPoint(AEntryPoint):
 
         await self._update_handlers(event_type)
 
-    async def emit(self, event_type: str, data: Any) -> Event:
-        event = Event(event_type, data)
+    async def emit(self, event_type: str, data: Any, id: Optional[str] = None) -> Event:
+
+        # Constructing event
+        if id:
+            event = Event(event_type, data, id)
+        else:
+            event = Event(event_type, data)
+
         if self.block:
             await self._bus._emit(event)
         else:
