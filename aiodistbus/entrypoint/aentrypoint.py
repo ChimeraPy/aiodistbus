@@ -3,19 +3,11 @@ import logging
 import uuid
 from abc import ABC, abstractmethod
 from collections import deque
-from typing import (
-    Any,
-    Callable,
-    Coroutine,
-    Dict,
-    Type,
-    Optional,
-    List
-)
+from typing import Any, Callable, Coroutine, Dict, List, Optional, Type
 
 from ..protocols import Event, OnHandler
 
-logger = logging.getLogger('aiodistbus')
+logger = logging.getLogger("aiodistbus")
 
 
 class AEntryPoint(ABC):
@@ -26,13 +18,18 @@ class AEntryPoint(ABC):
         self._handlers: Dict[str, OnHandler] = {}
         self._wildcards: Dict[str, OnHandler] = {}
         self._received: deque[str] = deque(maxlen=10)
-        self._close_task: Optional[asyncio.Task] = None
+        self._tasks: List[asyncio.Task] = []
 
-    def _wrapper(self, handler: Callable, unpack: bool = True, create_task: bool = False) -> Callable:
+    def _wrapper(
+        self, handler: Callable, unpack: bool = True, create_task: bool = False
+    ) -> Callable:
         async def awrapper(event: Event):
             coro: Optional[Coroutine] = None
             if unpack:
-                if type(event.data) is not type(None) and self._handlers[event.type].dtype:
+                if (
+                    type(event.data) is not type(None)
+                    and self._handlers[event.type].dtype
+                ):
                     coro = handler(event.data)
                 else:
                     coro = handler()
@@ -41,10 +38,7 @@ class AEntryPoint(ABC):
 
             if coro:
                 if create_task:
-                    if event.type == 'eventbus.close' and self._close_task is None:
-                        self._close_task = asyncio.create_task(coro)
-                    else:
-                        asyncio.create_task(coro)
+                    self._tasks.append(asyncio.create_task(coro))
                 else:
                     await coro
 
@@ -63,9 +57,7 @@ class AEntryPoint(ABC):
             return wrapper
 
     @abstractmethod
-    async def on(
-        self, event_type: str, handler: Callable, dtype: Type
-    ):
+    async def on(self, event_type: str, handler: Callable, dtype: Type):
         ...
 
     @abstractmethod

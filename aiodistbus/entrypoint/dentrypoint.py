@@ -1,12 +1,12 @@
 import asyncio
 import json
 import logging
+from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional, Type
 
 import asyncio_atexit
 import zmq
 import zmq.asyncio
-from dataclasses import dataclass
 from dataclasses_json import DataClassJsonMixin
 
 from ..cfg import global_config
@@ -46,7 +46,7 @@ class DEntryPoint(AEntryPoint):
                 [topic, event] = await s.recv_multipart()
                 topic = topic.decode("utf-8")
                 event = event.decode("utf-8")
-                logger.debug(f"SUBSCRIBER: Received {topic} - {event}")
+                # logger.debug(f"SUBSCRIBER: Received {topic} - {event}")
 
                 # With the data, use the handler
                 if topic in self._handlers:
@@ -55,7 +55,7 @@ class DEntryPoint(AEntryPoint):
                     dtype = self._handlers[topic].dtype
                     event = Event.from_json(event)
                     if dtype:
-                        if hasattr(dtype, '__annotations__'):
+                        if hasattr(dtype, "__annotations__"):
                             decoder = lambda x: dtype.from_json(bytes(x).decode())
                         else:
                             try:
@@ -105,7 +105,11 @@ class DEntryPoint(AEntryPoint):
     ####################################################################
 
     async def on(
-        self, event_type: str, handler: Callable, dtype: Optional[Type] = None, create_task: bool = False
+        self,
+        event_type: str,
+        handler: Callable,
+        dtype: Optional[Type] = None,
+        create_task: bool = False,
     ):
 
         # Track handlers (supporting wildcards)
@@ -114,7 +118,9 @@ class DEntryPoint(AEntryPoint):
             on_handler = OnHandler(event_type, wrapped_handler, dtype)
             self._handlers[event_type] = on_handler
         else:
-            wrapped_handler = self._wrapper(handler, unpack=False, create_task=create_task)
+            wrapped_handler = self._wrapper(
+                handler, unpack=False, create_task=create_task
+            )
             on_handler = OnHandler(event_type, wrapped_handler, dtype)
             self._wildcards[event_type] = on_handler
 
@@ -172,12 +178,6 @@ class DEntryPoint(AEntryPoint):
 
     async def close(self):
 
-        # Check if closing is already happening
-        logger.debug(f"{asyncio.current_task} - {self._close_task}")
-        if self._close_task and asyncio.current_task != self._close_task:
-            logger.debug("Already closing")
-            return
-
         # If not closed already, close
         async with self._lock:
             if self._running:
@@ -193,6 +193,3 @@ class DEntryPoint(AEntryPoint):
                         self.subscriber.close()
                     if self.publisher:
                         self.publisher.close()
-
-                    logger.debug("Closing context")
-                    self.ctx.term()

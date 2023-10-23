@@ -107,18 +107,23 @@ async def test_dentrypoint_instance(dbus):
     await entry.close()
 
 
-@pytest.mark.parametrize("event_type, handler, dtype, dtype_instance", [
-    ("test", handler, ExampleEvent, ExampleEvent("Hello")),
-    ("test_str", handler_str, str, "Hello"),
-    ("test_bytes", handler_bytes, bytes, b"Hello"),
-    ("test_list", handler_list, List, ["Hello"]),
-    ("test_int", handler_int, int, 1),
-    ("test_float", handler_float, float, 1.0),
-    ("test_bool", handler_bool, bool, True),
-    ("test_none", handler_none, None, None),
-    ("test_dict", handler_dict, dict, {"hello": "world"}),
-])
-async def test_local_eventbus(bus, entrypoints, event_type, handler, dtype, dtype_instance):
+@pytest.mark.parametrize(
+    "event_type, handler, dtype, dtype_instance",
+    [
+        ("test", handler, ExampleEvent, ExampleEvent("Hello")),
+        ("test_str", handler_str, str, "Hello"),
+        ("test_bytes", handler_bytes, bytes, b"Hello"),
+        ("test_list", handler_list, List, ["Hello"]),
+        ("test_int", handler_int, int, 1),
+        ("test_float", handler_float, float, 1.0),
+        ("test_bool", handler_bool, bool, True),
+        ("test_none", handler_none, None, None),
+        ("test_dict", handler_dict, dict, {"hello": "world"}),
+    ],
+)
+async def test_local_eventbus(
+    bus, entrypoints, event_type, handler, dtype, dtype_instance
+):
 
     # Create resources
     e1, e2 = entrypoints
@@ -171,18 +176,23 @@ async def test_remote_eventbus_connect(dbus, dentrypoints):
     await e2.connect(dbus.ip, dbus.port)
 
 
-@pytest.mark.parametrize("event_type, handler, dtype, dtype_instance", [
-    ("test", handler, ExampleEvent, ExampleEvent("Hello")),
-    # ("test_str", handler_str, str, "Hello"),
-    # ("test_bytes", handler_bytes, bytes, b"Hello"),
-    # ("test_list", handler_list, List, ["Hello"]),
-    # ("test_int", handler_int, int, 1),
-    # ("test_float", handler_float, float, 1.0),
-    # ("test_bool", handler_bool, bool, True),
-    # ("test_none", handler_none, None, None),
-    # ("test_dict", handler_dict, dict, {"hello": "world"}),
-])
-async def test_remote_eventbus_emit(dbus, dentrypoints, event_type, handler, dtype, dtype_instance):
+@pytest.mark.parametrize(
+    "event_type, handler, dtype, dtype_instance",
+    [
+        ("test", handler, ExampleEvent, ExampleEvent("Hello")),
+        ("test_str", handler_str, str, "Hello"),
+        ("test_bytes", handler_bytes, bytes, b"Hello"),
+        ("test_list", handler_list, List, ["Hello"]),
+        ("test_int", handler_int, int, 1),
+        ("test_float", handler_float, float, 1.0),
+        ("test_bool", handler_bool, bool, True),
+        ("test_none", handler_none, None, None),
+        ("test_dict", handler_dict, dict, {"hello": "world"}),
+    ],
+)
+async def test_remote_eventbus_emit(
+    dbus, dentrypoints, event_type, handler, dtype, dtype_instance
+):
 
     # Create resources
     e1, e2 = dentrypoints
@@ -202,8 +212,6 @@ async def test_remote_eventbus_emit(dbus, dentrypoints, event_type, handler, dty
 
     # Assert
     assert event1 and event1.id in e1._received
-    await dbus.close()
-    await asyncio.sleep(1)
 
 
 async def test_remote_eventbus_emit_wildcard(dbus, dentrypoints):

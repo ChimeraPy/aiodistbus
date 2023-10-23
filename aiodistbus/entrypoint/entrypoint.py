@@ -70,3 +70,4 @@ class EntryPoint(AEntryPoint):
     async def close(self):
         if self._bus:
             self._bus._remove(self.id)
+            self._bus = None
