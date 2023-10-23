@@ -1,3 +1,4 @@
+from .cfg import global_config
 from ._log import setup as setup_log
 from ._loop import setup as setup_loop
 from .entrypoint import DEntryPoint, EntryPoint

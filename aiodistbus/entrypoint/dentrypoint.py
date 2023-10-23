@@ -6,8 +6,10 @@ from typing import Any, Callable, Dict, Optional, Type
 import asyncio_atexit
 import zmq
 import zmq.asyncio
+from dataclasses import dataclass
 from dataclasses_json import DataClassJsonMixin
 
+from ..cfg import global_config
 from ..protocols import Event, OnHandler
 from .aentrypoint import AEntryPoint
 
@@ -43,6 +45,7 @@ class DEntryPoint(AEntryPoint):
                 [topic, event] = await s.recv_multipart()
                 topic = topic.decode("utf-8")
                 event = event.decode("utf-8")
+                # logger.debug(f"SUBSCRIBER: Received {topic} - {event}")
 
                 # With the data, use the handler
                 if topic in self._handlers:
@@ -51,7 +54,17 @@ class DEntryPoint(AEntryPoint):
                     dtype = self._handlers[topic].dtype
                     event = Event.from_json(event)
                     if dtype:
-                        event.data = dtype(**event.data)
+                        if hasattr(dtype, '__annotations__'):
+                            decoder = lambda x: dtype.from_json(bytes(x).decode())
+                        else:
+                            try:
+                                decoder = global_config.get_decoder(dtype)
+                            except ValueError:
+                                logger.error(f"Could not find decoder for {dtype}")
+
+                        event.data = decoder(bytes(event.data))
+                    else:
+                        event.data = None
 
                     # Pass through the handler
                     handler = self._handlers[topic].handler
@@ -65,6 +78,7 @@ class DEntryPoint(AEntryPoint):
                             # Reconstruct the data (if needed)
                             if not isinstance(event, Event):
                                 event = Event.from_json(event)
+                                event.data = bytes(event.data)
 
                             # Pass through the handler
                             handler = self._wildcards[wildcard].handler
@@ -105,11 +119,23 @@ class DEntryPoint(AEntryPoint):
 
         await self._update_handlers(event_type)
 
-    async def emit(self, event_type: str, data: DataClassJsonMixin) -> Optional[Event]:
+    async def emit(self, event_type: str, data: Any) -> Optional[Event]:
         if not self.snapshot or not self.publisher:
             logger.warning("Not connected to server")
             return None
 
+        # Serialize the data
+        if isinstance(data, DataClassJsonMixin):
+            encoder = lambda x: x.to_json().encode("utf-8")
+        else:
+            try:
+                encoder = global_config.get_encoder(type(data))
+            except ValueError:
+                logger.error(f"Could not find encoder for {type(data)}")
+                return None
+        data = encoder(data)
+
+        # Send the data
         event = Event(event_type, data)
         await self.publisher.send_multipart(
             [event_type.encode("utf-8"), event.to_json().encode()]

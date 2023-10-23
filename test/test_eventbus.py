@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from dataclasses import dataclass
+from typing import List
 
 import pytest
 from dataclasses_json import DataClassJsonMixin
@@ -17,6 +18,46 @@ class ExampleEvent(DataClassJsonMixin):
 
 async def handler(event: ExampleEvent):
     assert isinstance(event, ExampleEvent)
+    logger.info(f"Received event {event}")
+
+
+async def handler_str(event: str):
+    assert isinstance(event, str)
+    logger.info(f"Received event {event}")
+
+
+async def handler_bytes(event: bytes):
+    assert isinstance(event, bytes)
+    logger.info(f"Received event {event}")
+
+
+async def handler_int(event: int):
+    assert isinstance(event, int)
+    logger.info(f"Received event {event}")
+
+
+async def handler_float(event: float):
+    assert isinstance(event, float)
+    logger.info(f"Received event {event}")
+
+
+async def handler_bool(event: bool):
+    assert isinstance(event, bool)
+    logger.info(f"Received event {event}")
+
+
+async def handler_none(event: None):
+    assert event is None
+    logger.info(f"Received event {event}")
+
+
+async def handler_dict(event: dict):
+    assert isinstance(event, dict)
+    logger.info(f"Received event {event}")
+
+
+async def handler_list(event: List[str]):
+    assert isinstance(event, List)
     logger.info(f"Received event {event}")
 
 
@@ -69,6 +110,14 @@ async def test_dentrypoint_instance(dbus):
 
 @pytest.mark.parametrize("event_type, handler, dtype, dtype_instance", [
     ("test", handler, ExampleEvent, ExampleEvent("Hello")),
+    ("test_str", handler_str, str, "Hello"),
+    ("test_bytes", handler_bytes, bytes, b"Hello"),
+    ("test_list", handler_list, List, ["Hello"]),
+    ("test_int", handler_int, int, 1),
+    ("test_float", handler_float, float, 1.0),
+    ("test_bool", handler_bool, bool, True),
+    ("test_none", handler_none, None, None),
+    ("test_dict", handler_dict, dict, {"hello": "world"}),
 ])
 async def test_local_eventbus(bus, entrypoints, event_type, handler, dtype, dtype_instance):
 
@@ -123,20 +172,31 @@ async def test_remote_eventbus_connect(dbus, dentrypoints):
     await e2.connect(dbus.ip, dbus.port)
 
 
-async def test_remote_eventbus_emit(dbus, dentrypoints):
+@pytest.mark.parametrize("event_type, handler, dtype, dtype_instance", [
+    ("test", handler, ExampleEvent, ExampleEvent("Hello")),
+    ("test_str", handler_str, str, "Hello"),
+    ("test_bytes", handler_bytes, bytes, b"Hello"),
+    ("test_list", handler_list, List, ["Hello"]),
+    ("test_int", handler_int, int, 1),
+    ("test_float", handler_float, float, 1.0),
+    ("test_bool", handler_bool, bool, True),
+    ("test_none", handler_none, None, None),
+    ("test_dict", handler_dict, dict, {"hello": "world"}),
+])
+async def test_remote_eventbus_emit(dbus, dentrypoints, event_type, handler, dtype, dtype_instance):
 
     # Create resources
     e1, e2 = dentrypoints
 
     # Add handlers
-    await e1.on("test", handler, ExampleEvent)
+    await e1.on(event_type, handler, dtype)
 
     # Connect
     await e1.connect(dbus.ip, dbus.port)
     await e2.connect(dbus.ip, dbus.port)
 
     # Send message
-    event1 = await e2.emit("test", ExampleEvent("Hello"))
+    event1 = await e2.emit(event_type, dtype_instance)
 
     # Need to flush
     await dbus.flush()
