@@ -42,17 +42,17 @@ class EntryPoint(AEntryPoint):
         await self._update_handlers()
 
     async def on(
-        self, event_type: str, handler: Callable, dataclass: Optional[Type] = None
+        self, event_type: str, handler: Callable, dtype: Optional[Type] = None
     ):
 
         # Track handlers (supporting wildcards)
         if "*" not in event_type:
             wrapped_handler = self._wrapper(handler)
-            on_handler = OnHandler(event_type, wrapped_handler, dataclass)
+            on_handler = OnHandler(event_type, wrapped_handler, dtype)
             self._handlers[event_type] = on_handler
         else:
             wrapped_handler = self._wrapper(handler, unpack=False)
-            on_handler = OnHandler(event_type, wrapped_handler, dataclass)
+            on_handler = OnHandler(event_type, wrapped_handler, dtype)
             self._wildcards[event_type] = on_handler
 
         await self._update_handlers(event_type)

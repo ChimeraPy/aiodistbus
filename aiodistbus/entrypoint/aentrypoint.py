@@ -45,7 +45,7 @@ class AEntryPoint(ABC):
 
     @abstractmethod
     async def on(
-        self, event_type: str, handler: Union[Callable, Coroutine], dataclass: Type
+        self, event_type: str, handler: Union[Callable, Coroutine], dtype: Type
     ):
         ...
 

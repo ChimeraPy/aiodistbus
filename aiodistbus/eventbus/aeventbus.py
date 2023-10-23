@@ -19,7 +19,7 @@ class AEventBus(ABC):
         return self._running
 
     # @abstractmethod
-    async def _on(self, event_type: str, dataclass: Type):
+    async def _on(self, event_type: str, dtype: Type):
         ...
 
     # @abstractmethod

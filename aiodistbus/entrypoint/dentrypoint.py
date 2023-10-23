@@ -48,10 +48,10 @@ class DEntryPoint(AEntryPoint):
                 if topic in self._handlers:
 
                     # Reconstruct the data
-                    dataclass = self._handlers[topic].dataclass
+                    dtype = self._handlers[topic].dtype
                     event = Event.from_json(event)
-                    if dataclass:
-                        event.data = dataclass(**event.data)
+                    if dtype:
+                        event.data = dtype(**event.data)
 
                     # Pass through the handler
                     handler = self._handlers[topic].handler
@@ -90,17 +90,17 @@ class DEntryPoint(AEntryPoint):
     ####################################################################
 
     async def on(
-        self, event_type: str, handler: Callable, dataclass: Optional[Type] = None
+        self, event_type: str, handler: Callable, dtype: Optional[Type] = None
     ):
 
         # Track handlers (supporting wildcards)
         if "*" not in event_type:
             wrapped_handler = self._wrapper(handler)
-            on_handler = OnHandler(event_type, wrapped_handler, dataclass)
+            on_handler = OnHandler(event_type, wrapped_handler, dtype)
             self._handlers[event_type] = on_handler
         else:
             wrapped_handler = self._wrapper(handler, unpack=False)
-            on_handler = OnHandler(event_type, wrapped_handler, dataclass)
+            on_handler = OnHandler(event_type, wrapped_handler, dtype)
             self._wildcards[event_type] = on_handler
 
         await self._update_handlers(event_type)

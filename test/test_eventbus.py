@@ -67,22 +67,23 @@ async def test_dentrypoint_instance(dbus):
     await entry.close()
 
 
-async def test_local_eventbus(bus, entrypoints):
+@pytest.mark.parametrize("event_type, handler, dtype, dtype_instance", [
+    ("test", handler, ExampleEvent, ExampleEvent("Hello")),
+])
+async def test_local_eventbus(bus, entrypoints, event_type, handler, dtype, dtype_instance):
 
     # Create resources
     e1, e2 = entrypoints
 
     # Add handlers
-    await e1.on("test", handler, ExampleEvent)
-    await e1.on("hello", handler, ExampleEvent)
-    await e1.on("test.hello", handler, ExampleEvent)
+    await e1.on(event_type, handler, dtype)
 
     # Connect
     await e1.connect(bus)
     await e2.connect(bus)
 
     # Send message
-    event = await e2.emit("test", ExampleEvent("Hello"))
+    event = await e2.emit(event_type, dtype_instance)
 
     # Assert
     assert event.id in e1._received
