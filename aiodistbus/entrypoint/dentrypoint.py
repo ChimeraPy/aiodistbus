@@ -22,6 +22,7 @@ class DEntryPoint(AEntryPoint):
 
         # Parameters
         self._running: bool = False
+        self._lock: asyncio.Lock = asyncio.Lock()
         self.run_task: Optional[asyncio.Task] = None
         self.snapshot: Optional[zmq.asyncio.Socket] = None
         self.subscriber: Optional[zmq.asyncio.Socket] = None
@@ -45,7 +46,7 @@ class DEntryPoint(AEntryPoint):
                 [topic, event] = await s.recv_multipart()
                 topic = topic.decode("utf-8")
                 event = event.decode("utf-8")
-                # logger.debug(f"SUBSCRIBER: Received {topic} - {event}")
+                logger.debug(f"SUBSCRIBER: Received {topic} - {event}")
 
                 # With the data, use the handler
                 if topic in self._handlers:
@@ -104,16 +105,16 @@ class DEntryPoint(AEntryPoint):
     ####################################################################
 
     async def on(
-        self, event_type: str, handler: Callable, dtype: Optional[Type] = None
+        self, event_type: str, handler: Callable, dtype: Optional[Type] = None, create_task: bool = False
     ):
 
         # Track handlers (supporting wildcards)
         if "*" not in event_type:
-            wrapped_handler = self._wrapper(handler)
+            wrapped_handler = self._wrapper(handler, create_task=create_task)
             on_handler = OnHandler(event_type, wrapped_handler, dtype)
             self._handlers[event_type] = on_handler
         else:
-            wrapped_handler = self._wrapper(handler, unpack=False)
+            wrapped_handler = self._wrapper(handler, unpack=False, create_task=create_task)
             on_handler = OnHandler(event_type, wrapped_handler, dtype)
             self._wildcards[event_type] = on_handler
 
@@ -158,6 +159,7 @@ class DEntryPoint(AEntryPoint):
         self._running = True
 
         # Update the subscriber's topics
+        await self.on("eventbus.close", self.close, create_task=True)
         await self._update_handlers()
 
         # First, use snapshot to connect
@@ -170,16 +172,27 @@ class DEntryPoint(AEntryPoint):
 
     async def close(self):
 
-        if self._running:
-            self._running = False
-            if self.run_task:
-                await self.run_task
-            if self.snapshot:
-                await self.snapshot.send("DISCONNECT".encode())
-                self.snapshot.close()
-            if self.subscriber:
-                self.subscriber.close()
-            if self.publisher:
-                self.publisher.close()
+        # Check if closing is already happening
+        logger.debug(f"{asyncio.current_task} - {self._close_task}")
+        if self._close_task and asyncio.current_task != self._close_task:
+            logger.debug("Already closing")
+            return
 
-            self.ctx.term()
+        # If not closed already, close
+        async with self._lock:
+            if self._running:
+                self._running = False
+                if self.run_task:
+                    await self.run_task
+
+                if not self.ctx.closed:
+                    if self.snapshot:
+                        await self.snapshot.send("DISCONNECT".encode())
+                        self.snapshot.close()
+                    if self.subscriber:
+                        self.subscriber.close()
+                    if self.publisher:
+                        self.publisher.close()
+
+                    logger.debug("Closing context")
+                    self.ctx.term()

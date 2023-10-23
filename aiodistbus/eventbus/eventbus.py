@@ -44,7 +44,6 @@ class EventBus(AEventBus):
             await asyncio.gather(*coros)
 
     async def _emit(self, event: Event):
-        # import pdb; pdb.set_trace()
 
         # Handle wildcard subscriptions
         for wildcard, subs in self._wildcard_subs.items():
@@ -66,4 +65,6 @@ class EventBus(AEventBus):
     ####################################################################
 
     async def close(self):
+        # Emit first to allow for cleanup
+        await self._emit(Event("eventbus.close"))
         self._running = False

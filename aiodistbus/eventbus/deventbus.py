@@ -50,13 +50,15 @@ class DEventBus:
     def port(self):
         return self._port
 
+    async def _emit(self, topic: bytes, msg: bytes):
+        await self.publisher.send_multipart([topic, msg])
+
     async def _snapshot_reactor(self, id: str, msg: bytes):
         ...
         # logger.debug(f"ROUTER: Received {id}: {msg}")
 
     async def _collector_reactor(self, topic: bytes, msg: bytes):
-        # logger.debug(f"COLLECTOR: Received {topic} - {msg}")
-        await self.publisher.send_multipart([topic, msg])
+        await self._emit(topic, msg)
 
     async def _run(self):
         while self._running:
@@ -86,12 +88,14 @@ class DEventBus:
         await self._flush_flag.wait()
 
     async def close(self):
-
+        
         if self._running:
+            await self._emit(b"eventbus.close", Event("eventbus.close").to_json().encode())
             self._running = False
             await self.run_task
 
-        self.snapshot.close()
-        self.publisher.close()
-        self.collector.close()
-        self.ctx.term()
+            # Close sockets
+            self.snapshot.close()
+            self.publisher.close()
+            self.collector.close()
+            self.ctx.term()

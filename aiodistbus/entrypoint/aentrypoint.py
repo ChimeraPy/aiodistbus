@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import uuid
 from abc import ABC, abstractmethod
 from collections import deque
@@ -8,10 +9,13 @@ from typing import (
     Coroutine,
     Dict,
     Type,
-    Union,
+    Optional,
+    List
 )
 
 from ..protocols import Event, OnHandler
+
+logger = logging.getLogger('aiodistbus')
 
 
 class AEntryPoint(ABC):
@@ -22,13 +26,28 @@ class AEntryPoint(ABC):
         self._handlers: Dict[str, OnHandler] = {}
         self._wildcards: Dict[str, OnHandler] = {}
         self._received: deque[str] = deque(maxlen=10)
+        self._close_task: Optional[asyncio.Task] = None
 
-    def _wrapper(self, handler: Callable, unpack: bool = True) -> Callable:
+    def _wrapper(self, handler: Callable, unpack: bool = True, create_task: bool = False) -> Callable:
         async def awrapper(event: Event):
+            coro: Optional[Coroutine] = None
             if unpack:
-                await handler(event.data)
+                if type(event.data) is not type(None) and self._handlers[event.type].dtype:
+                    coro = handler(event.data)
+                else:
+                    coro = handler()
             else:
-                await handler(event)
+                coro = handler(event)
+
+            if coro:
+                if create_task:
+                    if event.type == 'eventbus.close' and self._close_task is None:
+                        self._close_task = asyncio.create_task(coro)
+                    else:
+                        asyncio.create_task(coro)
+                else:
+                    await coro
+
             self._received.append(event.id)
 
         def wrapper(event: Event):
@@ -45,7 +64,7 @@ class AEntryPoint(ABC):
 
     @abstractmethod
     async def on(
-        self, event_type: str, handler: Union[Callable, Coroutine], dtype: Type
+        self, event_type: str, handler: Callable, dtype: Type
     ):
         ...
 
