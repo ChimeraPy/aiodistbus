@@ -16,10 +16,12 @@ class ExampleEvent(DataClassJsonMixin):
 
 
 async def handler(event: ExampleEvent):
+    assert isinstance(event, ExampleEvent)
     logger.info(f"Received event {event}")
 
 
 async def wildcard_handler(event: Event):
+    assert isinstance(event, Event)
     logger.info(f"Received event {event}")
 
 
@@ -37,6 +39,24 @@ async def dbus():
     await bus.close()
 
 
+@pytest.fixture
+async def entrypoints():
+    e1 = EntryPoint()
+    e2 = EntryPoint()
+    yield e1, e2
+    await e1.close()
+    await e2.close()
+
+
+@pytest.fixture
+async def dentrypoints():
+    e1 = DEntryPoint()
+    e2 = DEntryPoint()
+    yield e1, e2
+    await e1.close()
+    await e2.close()
+
+
 async def test_deventbus_instance(dbus):
     ...
 
@@ -47,120 +67,103 @@ async def test_dentrypoint_instance(dbus):
     await entry.close()
 
 
-async def test_local_eventbus(bus):
+async def test_local_eventbus(bus, entrypoints):
 
     # Create resources
-    entry1 = EntryPoint()
-    entry2 = EntryPoint()
+    e1, e2 = entrypoints
 
     # Add handlers
-    await entry1.on("test", handler, ExampleEvent)
-    await entry1.on("hello", handler, ExampleEvent)
-    await entry1.on("test.hello", handler, ExampleEvent)
+    await e1.on("test", handler, ExampleEvent)
+    await e1.on("hello", handler, ExampleEvent)
+    await e1.on("test.hello", handler, ExampleEvent)
 
     # Connect
-    await entry1.connect(bus)
-    await entry2.connect(bus)
+    await e1.connect(bus)
+    await e2.connect(bus)
 
     # Send message
-    event = await entry2.emit("test", ExampleEvent("Hello"))
+    event = await e2.emit("test", ExampleEvent("Hello"))
 
     # Assert
-    assert event.id in entry1._received
-    assert len(entry1._received) == 1
-    await entry1.close()
-    await entry2.close()
+    assert event.id in e1._received
+    assert len(e1._received) == 1
 
 
-async def test_local_eventbus_wildcard(bus):
+async def test_local_eventbus_wildcard(bus, entrypoints):
 
     # Create resources
-    entry1 = EntryPoint()
-    entry2 = EntryPoint()
+    e1, e2 = entrypoints
 
     # Add handlers
-    await entry1.on("test.*", wildcard_handler, Event)
+    await e1.on("test.*", wildcard_handler, Event)
 
     # Connect
-    await entry1.connect(bus)
-    await entry2.connect(bus)
+    await e1.connect(bus)
+    await e2.connect(bus)
 
     # Send message
-    event = await entry2.emit("test.a", ExampleEvent("Hello"))
+    event = await e2.emit("test.a", ExampleEvent("Hello"))
 
     # Assert
-    assert event.id in entry1._received
-    assert len(entry1._received) == 1
-    await entry1.close()
-    await entry2.close()
+    assert event.id in e1._received
+    assert len(e1._received) == 1
 
 
-async def test_remote_eventbus_connect(dbus):
+async def test_remote_eventbus_connect(dbus, dentrypoints):
 
     # Create resources
-    entry1 = DEntryPoint()
-    entry2 = DEntryPoint()
+    e1, e2 = dentrypoints
 
     # Add handlers
-    await entry1.on("test", handler, ExampleEvent)
+    await e1.on("test", handler, ExampleEvent)
 
     # Connect
-    await entry1.connect(dbus.ip, dbus.port)
-    await entry2.connect(dbus.ip, dbus.port)
-
-    # Assert
-    await entry1.close()
-    await entry2.close()
+    await e1.connect(dbus.ip, dbus.port)
+    await e2.connect(dbus.ip, dbus.port)
 
 
-async def test_remote_eventbus_emit(dbus):
+async def test_remote_eventbus_emit(dbus, dentrypoints):
 
     # Create resources
-    entry1 = DEntryPoint()
-    entry2 = DEntryPoint()
+    e1, e2 = dentrypoints
 
     # Add handlers
-    await entry1.on("test", handler, ExampleEvent)
+    await e1.on("test", handler, ExampleEvent)
 
     # Connect
-    await entry1.connect(dbus.ip, dbus.port)
-    await entry2.connect(dbus.ip, dbus.port)
+    await e1.connect(dbus.ip, dbus.port)
+    await e2.connect(dbus.ip, dbus.port)
 
     # Send message
-    event1 = await entry2.emit("test", ExampleEvent("Hello"))
+    event1 = await e2.emit("test", ExampleEvent("Hello"))
 
     # Need to flush
     await dbus.flush()
 
     # Assert
-    assert event1 and event1.id in entry1._received
-    await entry1.close()
-    await entry2.close()
+    assert event1 and event1.id in e1._received
 
 
-async def test_remote_eventbus_emit_wildcard(dbus):
+async def test_remote_eventbus_emit_wildcard(dbus, dentrypoints):
 
     # Create resources
-    entry1 = DEntryPoint()
-    entry2 = DEntryPoint()
+    e1, e2 = dentrypoints
 
     # Add handlers
-    await entry1.on("test", handler, ExampleEvent)
-    await entry1.on("test.*", wildcard_handler, Event)
+    await e1.on("test", handler, ExampleEvent)
+    await e1.on("test.*", wildcard_handler, Event)
 
     # Connect
-    await entry1.connect(dbus.ip, dbus.port)
-    await entry2.connect(dbus.ip, dbus.port)
+    await e1.connect(dbus.ip, dbus.port)
+    await e2.connect(dbus.ip, dbus.port)
 
     # Send message
-    event1 = await entry2.emit("hello", ExampleEvent("Hello"))
-    event2 = await entry2.emit("test.b", ExampleEvent("Goodbye"))
+    event1 = await e2.emit("hello", ExampleEvent("Hello"))
+    event2 = await e2.emit("test.b", ExampleEvent("Goodbye"))
 
     # Need to flush
     await dbus.flush()
 
     # Assert
-    assert event1 and event1.id not in entry1._received
-    assert event2 and event2.id in entry1._received
-    await entry1.close()
-    await entry2.close()
+    assert event1 and event1.id not in e1._received
+    assert event2 and event2.id in e1._received

@@ -23,13 +23,19 @@ class AEntryPoint(ABC):
         self._wildcards: Dict[str, OnHandler] = {}
         self._received: deque[str] = deque(maxlen=10)
 
-    def _wrapper(self, handler: Callable) -> Callable:
+    def _wrapper(self, handler: Callable, unpack: bool = True) -> Callable:
         async def awrapper(event: Event):
-            await handler(event.data)
+            if unpack:
+                await handler(event.data)
+            else:
+                await handler(event)
             self._received.append(event.id)
 
         def wrapper(event: Event):
-            handler(event.data)
+            if unpack:
+                handler(event.data)
+            else:
+                handler(event)
             self._received.append(event.id)
 
         if asyncio.iscoroutinefunction(handler):

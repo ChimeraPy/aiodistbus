@@ -92,13 +92,15 @@ class DEntryPoint(AEntryPoint):
     async def on(
         self, event_type: str, handler: Callable, dataclass: Optional[Type] = None
     ):
-        wrapped_handler = self._wrapper(handler)
-        on_handler = OnHandler(event_type, wrapped_handler, dataclass)
 
         # Track handlers (supporting wildcards)
         if "*" not in event_type:
+            wrapped_handler = self._wrapper(handler)
+            on_handler = OnHandler(event_type, wrapped_handler, dataclass)
             self._handlers[event_type] = on_handler
         else:
+            wrapped_handler = self._wrapper(handler, unpack=False)
+            on_handler = OnHandler(event_type, wrapped_handler, dataclass)
             self._wildcards[event_type] = on_handler
 
         await self._update_handlers(event_type)
