@@ -1,14 +1,13 @@
 import asyncio
 import logging
-from typing import Any, Callable, Optional, Type
+from typing import Any, Callable, Coroutine, List, Optional, Type
 
 import asyncio_atexit
 import zmq
 import zmq.asyncio
-from dataclasses_json import DataClassJsonMixin
 
-from ..cfg import global_config
 from ..protocols import Event, OnHandler
+from ..utils import encode, reconstruct, wildcard_filtering
 from .aentrypoint import AEntryPoint
 
 logger = logging.getLogger("aiodistbus")
@@ -44,50 +43,26 @@ class DEntryPoint(AEntryPoint):
                 [topic, event] = await s.recv_multipart()
                 topic = topic.decode("utf-8")
                 event = event.decode("utf-8")
-                # logger.debug(f"SUBSCRIBER: Received {topic} - {event}")
+                logger.debug(f"SUBSCRIBER: Received {topic} - {event}")
 
-                # With the data, use the handler
+                # Reconstruct the data
                 if topic in self._handlers:
+                    known_type = self._handlers[topic].dtype
+                else:
+                    known_type = None
+                event = await reconstruct(event, known_type)
 
-                    # Reconstruct the data
-                    dtype = self._handlers[topic].dtype
-                    event = Event.from_json(event)
-                    if dtype:
-                        if hasattr(dtype, "__annotations__"):
-                            decoder = lambda x: dtype.from_json(bytes(x).decode())
-                        else:
-                            try:
-                                decoder = global_config.get_decoder(dtype)
-                            except ValueError:
-                                logger.error(f"Could not find decoder for {dtype}")
+                # Obtain the handlers
+                coros: List[Coroutine] = []
+                if topic in self._handlers:
+                    coros.append(self._handlers[topic].handler(event))
+                for handler in self._wildcards.values():
+                    if wildcard_filtering(topic, handler.event_type):
+                        coros.append(handler.handler(event))
 
-                        event.data = decoder(bytes(event.data))
-                    else:
-                        event.data = None
-
-                    # Pass through the handler
-                    handler = self._handlers[topic].handler
-                    await handler(event)
-
-                # Certain meta events do not get captured by wilcard subscriptions
-                elif topic not in ["eventbus.close"]:
-
-                    # Check for wildcards
-                    for wildcard in self._wildcards:
-                        for i, j in zip(topic.split("."), wildcard.split(".")):
-                            if j == "*":
-
-                                # Reconstruct the data (if needed)
-                                if not isinstance(event, Event):
-                                    event = Event.from_json(event)
-                                    event.data = bytes(event.data)
-
-                                # Pass through the handler
-                                handler = self._wildcards[wildcard].handler
-                                await handler(event)
-                                break
-                            if i != j:
-                                break
+                # Await the handlers
+                if len(coros) > 0:
+                    await asyncio.gather(*coros)
 
     async def _update_handlers(self, event_type: Optional[str] = None):
         if not self.subscriber:
@@ -134,22 +109,16 @@ class DEntryPoint(AEntryPoint):
             logger.warning("Not connected to server")
             return None
 
-        # Serialize the data
-        if isinstance(data, DataClassJsonMixin):
-            encoder = lambda x: x.to_json().encode("utf-8")
-        else:
-            try:
-                encoder = global_config.get_encoder(type(data))
-            except ValueError:
-                logger.error(f"Could not find encoder for {type(data)}")
-                return None
-        data = encoder(data)
+        # Encode data
+        data = encode(data)
 
-        # Send the data
+        # Package data with an Event object
         if id:
             event = Event(event_type, data, id=id)
         else:
             event = Event(event_type, data)
+
+        # Send the data
         logger.debug(f"PUBLISHER: {event}")
         try:
             await self.publisher.send_multipart(
@@ -176,7 +145,7 @@ class DEntryPoint(AEntryPoint):
         self._running = True
 
         # Update the subscriber's topics
-        await self.on("eventbus.close", self.close, create_task=True)
+        await self.on("aiodistbus.eventbus.close", self.close, create_task=True)
         await self._update_handlers()
 
         # First, use snapshot to connect

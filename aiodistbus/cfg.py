@@ -1,10 +1,14 @@
-from typing import Dict, Union, Optional, Callable, Type, List
 import json
+from typing import Callable, Dict, List, Optional, Type, Union
+
+########################################################################
+## Serialization Configuration
+########################################################################
 
 Json = Union[dict, Dict, list, List, str, int, float, bool, None]
 
-class _GlobalConfig:
 
+class _GlobalConfig:
     def __init__(self):
         self.encoders: Dict[Union[Type, Optional[Type]], Callable[Type, bytes]] = {
             str: lambda x: x.encode("utf-8"),
@@ -33,4 +37,12 @@ class _GlobalConfig:
         else:
             raise ValueError(f"Decoder not found for {dtype}")
 
+
 global_config = _GlobalConfig()
+
+
+########################################################################
+## Event Blacklist
+########################################################################
+
+EVENT_BLACKLIST = ["aiodistbus.eventbus.close"]

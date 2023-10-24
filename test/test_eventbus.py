@@ -156,7 +156,7 @@ async def test_local_eventbus_wildcard(bus, entrypoints):
     await e2.connect(bus)
 
     # Send message
-    event = await e2.emit("test.a", ExampleEvent("Hello"))
+    event = await e2.emit("test.hello", ExampleEvent("Hello"))
 
     # Assert
     assert event.id in e1._received
@@ -263,3 +263,29 @@ async def test_bridge_bus_to_dbus(bus, dbus, entrypoints, dentrypoints):
 
     # Assert
     assert event.id in de1._received
+
+
+@pytest.mark.skip
+async def test_bridge_dbus_to_bus(bus, dbus, entrypoints, dentrypoints):
+
+    # Create resources
+    e1, _ = entrypoints
+    de1, _ = dentrypoints
+
+    # Add handlers
+    await e1.on("test", handler, ExampleEvent)
+
+    # Connect entrypoint to bus
+    await e1.connect(bus)
+    await de1.connect(dbus.ip, dbus.port)
+
+    # Bridge
+    await dbus.forward(bus)
+
+    # Send message
+    event = await de1.emit("test", ExampleEvent("Hello"))
+
+    # Need to flush
+    await dbus.flush()
+
+    # Assert

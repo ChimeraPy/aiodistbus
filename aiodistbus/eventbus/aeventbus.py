@@ -1,5 +1,7 @@
 import logging
+import uuid
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from typing import Dict, Type
 
 from ..protocols import Event, Subscriptions
@@ -12,11 +14,16 @@ class AEventBus(ABC):
 
         # State information
         self._running = False
-        self._subs: Dict[str, Dict[str, Subscriptions]] = {}
+        self._uuid = str(uuid.uuid4())
+        self._subs: Dict[str, Dict[str, Subscriptions]] = defaultdict(dict)
 
     @property
-    def running(self):
+    def running(self) -> bool:
         return self._running
+
+    @property
+    def uuid(self) -> str:
+        return self._uuid
 
     @abstractmethod
     async def _on(self, event_type: str, dtype: Type):

@@ -1,13 +1,16 @@
 import asyncio
 import logging
+from collections import defaultdict
+from typing import Dict, List, Optional
 
 import asyncio_atexit
 import zmq
 import zmq.asyncio
 
-from ..protocols import Event, OnHandler, Subscriptions
-from ..utils import get_ip_address
-from .aeventbus import AEventBus
+from ..cfg import EVENT_BLACKLIST
+from ..protocols import Event
+from ..utils import wildcard_filtering
+from .eventbus import EventBus
 
 logger = logging.getLogger("aiodistbus")
 
@@ -42,6 +45,10 @@ class DEventBus:
 
         asyncio_atexit.register(self.close)
 
+        # Local event buses
+        self._lbuses_wildcard: Dict[str, List[EventBus]] = defaultdict(list)
+        self._lbuses_subs: Dict[str, List[EventBus]] = defaultdict(list)
+
     @property
     def ip(self):
         return self._ip
@@ -58,7 +65,26 @@ class DEventBus:
         # logger.debug(f"ROUTER: Received {id}: {msg}")
 
     async def _collector_reactor(self, topic: bytes, msg: bytes):
+
+        # Broadcast via socket
         await self._emit(topic, msg)
+
+        # If local buses, send them the data
+        dtopic = topic.decode()
+
+        # Handle wildcard subscriptions
+        if dtopic not in EVENT_BLACKLIST:
+            for wildcard, buses in self._lbuses_wildcard.items():
+                if wildcard_filtering(dtopic, wildcard):
+                    for bus in buses:
+                        logger.debug(f"{dtopic}: {msg}")
+                        # await bus._emit(Event(dtopic, msg))
+
+        # Else, normal subscriptions
+        if dtopic in self._lbuses_subs:
+            for bus in self._lbuses_subs[dtopic]:
+                logger.debug(f"{dtopic}: {msg}")
+                # await bus._emit(Event(dtopic, msg))
 
     async def _run(self):
         while self._running:
@@ -87,10 +113,24 @@ class DEventBus:
         self._flush_flag.clear()
         await self._flush_flag.wait()
 
+    async def forward(self, bus: EventBus, event_types: Optional[List[str]] = None):
+
+        # Handle default event types
+        if event_types is None:
+            event_types = ["*"]
+
+        # Link
+        for event_type in event_types:
+            if "*" in event_type:
+                self._lbuses_wildcard[event_type].append(bus)
+            else:
+                self._lbuses_subs[event_type].append(bus)
+
     async def close(self):
-        
+
         if self._running:
-            await self._emit(b"eventbus.close", Event("eventbus.close").to_json().encode())
+            event_d = Event("aiodistbus.eventbus.close").to_json().encode()
+            await self._emit(b"aiodistbus.eventbus.close", event_d)
             self._running = False
             await self.run_task
 

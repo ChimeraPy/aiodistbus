@@ -40,7 +40,7 @@ class EntryPoint(AEntryPoint):
     async def connect(self, bus: EventBus):
         # Add bus and default handlers
         self._bus = bus
-        await self.on("eventbus.close", self.close)
+        await self.on("aiodistbus.eventbus.close", self.close)
         await self._update_handlers()
 
     async def on(
