@@ -265,7 +265,6 @@ async def test_bridge_bus_to_dbus(bus, dbus, entrypoints, dentrypoints):
     assert event.id in de1._received
 
 
-@pytest.mark.skip
 async def test_bridge_dbus_to_bus(bus, dbus, entrypoints, dentrypoints):
 
     # Create resources

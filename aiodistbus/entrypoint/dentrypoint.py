@@ -43,7 +43,7 @@ class DEntryPoint(AEntryPoint):
                 [topic, event] = await s.recv_multipart()
                 topic = topic.decode("utf-8")
                 event = event.decode("utf-8")
-                logger.debug(f"SUBSCRIBER: Received {topic} - {event}")
+                # logger.debug(f"SUBSCRIBER: Received {topic} - {event}")
 
                 # Reconstruct the data
                 if topic in self._handlers:
@@ -119,7 +119,7 @@ class DEntryPoint(AEntryPoint):
             event = Event(event_type, data)
 
         # Send the data
-        logger.debug(f"PUBLISHER: {event}")
+        # logger.debug(f"PUBLISHER: {event}")
         try:
             await self.publisher.send_multipart(
                 [event_type.encode("utf-8"), event.to_json().encode()]

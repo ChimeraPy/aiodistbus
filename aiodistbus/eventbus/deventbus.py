@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from collections import defaultdict
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Type
 
 import asyncio_atexit
 import zmq
@@ -9,7 +9,7 @@ import zmq.asyncio
 
 from ..cfg import EVENT_BLACKLIST
 from ..protocols import Event
-from ..utils import wildcard_filtering
+from ..utils import reconstruct, wildcard_search
 from .eventbus import EventBus
 
 logger = logging.getLogger("aiodistbus")
@@ -69,22 +69,39 @@ class DEventBus:
         # Broadcast via socket
         await self._emit(topic, msg)
 
+        # Only perform this if we have local buses
+        if len(self._lbuses_wildcard) == 0 and len(self._lbuses_subs) == 0:
+            return
+
         # If local buses, send them the data
         dtopic = topic.decode()
 
         # Handle wildcard subscriptions
+        bus_to_emit: List[EventBus] = []
         if dtopic not in EVENT_BLACKLIST:
-            for wildcard, buses in self._lbuses_wildcard.items():
-                if wildcard_filtering(dtopic, wildcard):
-                    for bus in buses:
-                        logger.debug(f"{dtopic}: {msg}")
-                        # await bus._emit(Event(dtopic, msg))
+            for match in wildcard_search(dtopic, self._lbuses_wildcard.keys()):
+                for bus in self._lbuses_wildcard[match]:
+                    # logger.debug(f"{dtopic}: {msg}")
+                    bus_to_emit.append(bus)
 
         # Else, normal subscriptions
         if dtopic in self._lbuses_subs:
             for bus in self._lbuses_subs[dtopic]:
-                logger.debug(f"{dtopic}: {msg}")
-                # await bus._emit(Event(dtopic, msg))
+                # logger.debug(f"{dtopic}: {msg}")
+                bus_to_emit.append(bus)
+
+        # Identify if any bus has the dtype
+        known_type: Optional[Type] = None
+        for bus in bus_to_emit:
+            if dtopic in bus._dtypes:
+                known_type = bus._dtypes[dtopic]
+
+        # Reconstruct the data
+        event = await reconstruct(msg.decode(), known_type)
+
+        # Emit the event
+        for bus in bus_to_emit:
+            await bus._emit(event)
 
     async def _run(self):
         while self._running:

@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Iterable, List, Type
+from typing import Any, Iterable, List, Optional, Type
 
 from dataclasses_json import DataClassJsonMixin
 
@@ -56,7 +56,7 @@ def reconstruct_event_data(event: Event, dtype: Type) -> Event:
     return event
 
 
-async def reconstruct(event_str: str, dtype: Type) -> Event:
+async def reconstruct(event_str: str, dtype: Optional[Type] = None) -> Event:
     event = decode(event_str)  # str -> Event
     if dtype:
         event = reconstruct_event_data(event, dtype)

@@ -1,9 +1,8 @@
 import asyncio
 import logging
 from collections import defaultdict
-from typing import Coroutine, Dict, Iterable, List, Optional
+from typing import Coroutine, Dict, Iterable, List, Optional, Type
 
-from ..cfg import EVENT_BLACKLIST
 from ..protocols import Event, OnHandler, Subscriptions
 from ..utils import wildcard_search
 from .aeventbus import AEventBus
@@ -16,6 +15,7 @@ class EventBus(AEventBus):
         super().__init__()
         self._running = True
         self._wildcard_subs: Dict[str, Dict[str, Subscriptions]] = defaultdict(dict)
+        self._dtypes: Dict[str, Type] = {}
 
     async def _on(self, id: str, handler: OnHandler):
         sub = Subscriptions(id, handler)
@@ -23,11 +23,19 @@ class EventBus(AEventBus):
             self._wildcard_subs[handler.event_type][id] = sub
         else:
             self._subs[handler.event_type][id] = sub
+            self._dtypes[handler.event_type] = handler.dtype
 
     def _remove(self, id: str):
+        to_be_removed: List[str] = []
         for route, subs in self._subs.items():
             if id in subs:
                 del self._subs[route][id]
+                if len(self._subs[route]) == 0:
+                    to_be_removed.append(route)
+
+        for route in to_be_removed:
+            del self._subs[route]
+            del self._dtypes[route]
 
     async def _exec(
         self, coros: List[Coroutine], event: Event, subs: Iterable[Subscriptions]
