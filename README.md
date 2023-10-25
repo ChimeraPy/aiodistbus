@@ -58,7 +58,11 @@ This is TODO
 
 # TODO
  - [x] Disconnect operation
- - [ ] Bridge Implementation
- - [ ] Error handling
- - [ ] Removing dead subscribers
+ - [x] Bridge Implementation
+ - [x] Removing dead subscribers
  - [ ] Heartbeat with handler
+ - [ ] Decorator Implementation (with Namespace)
+ - [ ] Error handling
+ - [ ] Stress testing
+ - [ ] Rerun pre-commit on all files
+ - [ ] Improve documentation

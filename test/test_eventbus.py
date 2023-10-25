@@ -239,14 +239,30 @@ async def test_remote_eventbus_emit_wildcard(dbus, dentrypoints):
     assert event2 and event2.id in e1._received
 
 
-async def test_bridge_bus_to_dbus(bus, dbus, entrypoints, dentrypoints):
+@pytest.mark.parametrize(
+    "event_type, handler, dtype, dtype_instance",
+    [
+        ("test", handler, ExampleEvent, ExampleEvent("Hello")),
+        ("test_str", handler_str, str, "Hello"),
+        ("test_bytes", handler_bytes, bytes, b"Hello"),
+        ("test_list", handler_list, List, ["Hello"]),
+        ("test_int", handler_int, int, 1),
+        ("test_float", handler_float, float, 1.0),
+        ("test_bool", handler_bool, bool, True),
+        ("test_none", handler_none, None, None),
+        ("test_dict", handler_dict, dict, {"hello": "world"}),
+    ],
+)
+async def test_bridge_bus_to_dbus(
+    bus, dbus, entrypoints, dentrypoints, event_type, handler, dtype, dtype_instance
+):
 
     # Create resources
     e1, _ = entrypoints
     de1, _ = dentrypoints
 
     # Add handlers
-    await de1.on("test", handler, ExampleEvent)
+    await de1.on(event_type, handler, dtype)
 
     # Connect entrypoint to bus
     await e1.connect(bus)
@@ -256,7 +272,7 @@ async def test_bridge_bus_to_dbus(bus, dbus, entrypoints, dentrypoints):
     await bus.forward(dbus.ip, dbus.port)
 
     # Send message
-    event = await e1.emit("test", ExampleEvent("Hello"))
+    event = await e1.emit(event_type, dtype_instance)
 
     # Need to flush
     await dbus.flush()
@@ -265,14 +281,30 @@ async def test_bridge_bus_to_dbus(bus, dbus, entrypoints, dentrypoints):
     assert event.id in de1._received
 
 
-async def test_bridge_dbus_to_bus(bus, dbus, entrypoints, dentrypoints):
+@pytest.mark.parametrize(
+    "event_type, handler, dtype, dtype_instance",
+    [
+        ("test", handler, ExampleEvent, ExampleEvent("Hello")),
+        ("test_str", handler_str, str, "Hello"),
+        ("test_bytes", handler_bytes, bytes, b"Hello"),
+        ("test_list", handler_list, List, ["Hello"]),
+        ("test_int", handler_int, int, 1),
+        ("test_float", handler_float, float, 1.0),
+        ("test_bool", handler_bool, bool, True),
+        ("test_none", handler_none, None, None),
+        ("test_dict", handler_dict, dict, {"hello": "world"}),
+    ],
+)
+async def test_bridge_dbus_to_bus(
+    bus, dbus, entrypoints, dentrypoints, event_type, handler, dtype, dtype_instance
+):
 
     # Create resources
     e1, _ = entrypoints
     de1, _ = dentrypoints
 
     # Add handlers
-    await e1.on("test", handler, ExampleEvent)
+    await e1.on(event_type, handler, dtype)
 
     # Connect entrypoint to bus
     await e1.connect(bus)
@@ -282,9 +314,10 @@ async def test_bridge_dbus_to_bus(bus, dbus, entrypoints, dentrypoints):
     await dbus.forward(bus)
 
     # Send message
-    event = await de1.emit("test", ExampleEvent("Hello"))
+    event = await de1.emit(event_type, dtype_instance)
 
     # Need to flush
     await dbus.flush()
 
     # Assert
+    assert event.id in e1._received

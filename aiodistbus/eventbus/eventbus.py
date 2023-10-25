@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import typing
 from collections import defaultdict
 from typing import Coroutine, Dict, Iterable, List, Optional, Type
 
@@ -9,6 +10,9 @@ from .aeventbus import AEventBus
 
 logger = logging.getLogger(__name__)
 
+if typing.TYPE_CHECKING:
+    from ..entrypoint import DEntryPoint
+
 
 class EventBus(AEventBus):
     def __init__(self):
@@ -16,6 +20,7 @@ class EventBus(AEventBus):
         self._running = True
         self._wildcard_subs: Dict[str, Dict[str, Subscriptions]] = defaultdict(dict)
         self._dtypes: Dict[str, Type] = {}
+        self._dentrypoints: Dict[str, DEntryPoint] = {}
 
     async def _on(self, id: str, handler: OnHandler):
         sub = Subscriptions(id, handler)
@@ -87,10 +92,22 @@ class EventBus(AEventBus):
             handler = OnHandler(event_type, _wrapper)
             await self._on(f"{ip}:{port}", handler)
 
+        # Store the entrypoint
+        self._dentrypoints[f"{ip}:{port}"] = e
+
     async def deforward(self, ip: str, port: int):
+        # Remove handlers
         self._remove(f"{ip}:{port}")
+
+        # Remove entrypoint
+        await self._dentrypoints[f"{ip}:{port}"].close()
+        del self._dentrypoints[f"{ip}:{port}"]
 
     async def close(self):
         # Emit first to allow for cleanup
         await self._emit(Event("aiodistbus.eventbus.close"))
         self._running = False
+
+        # Close all entrypoints
+        for e in self._dentrypoints.values():
+            await e.close()

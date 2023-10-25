@@ -37,7 +37,8 @@ def wildcard_search(topic: str, wildcards: Iterable[str]) -> List[str]:
 
 def decode(event_str: str) -> Event:
     event = Event.from_json(event_str)
-    event.data = bytes(event.data)
+    if isinstance(event.data, list):
+        event.data = bytes(event.data)
     return event
 
 
