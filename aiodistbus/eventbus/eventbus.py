@@ -4,7 +4,7 @@ import typing
 from collections import defaultdict
 from typing import Coroutine, Dict, Iterable, List, Optional, Type
 
-from ..protocols import Event, OnHandler, Subscriptions
+from ..protocols import Event, Handler, Subscriptions
 from ..utils import wildcard_search
 from .aeventbus import AEventBus
 
@@ -22,7 +22,7 @@ class EventBus(AEventBus):
         self._dtypes: Dict[str, Type] = {}
         self._dentrypoints: Dict[str, DEntryPoint] = {}
 
-    async def _on(self, id: str, handler: OnHandler):
+    async def _on(self, id: str, handler: Handler):
         sub = Subscriptions(id, handler)
         if "*" in handler.event_type:
             self._wildcard_subs[handler.event_type][id] = sub
@@ -48,10 +48,10 @@ class EventBus(AEventBus):
 
         for sub in subs:
             # If async function, await it
-            if asyncio.iscoroutinefunction(sub.handler.handler):
-                coros.append(sub.handler.handler(event))
+            if asyncio.iscoroutinefunction(sub.handler.function):
+                coros.append(sub.handler.function(event))
             else:
-                sub.handler.handler(event)
+                sub.handler.function(event)
 
     async def _emit(self, event: Event):
 
@@ -89,7 +89,7 @@ class EventBus(AEventBus):
             async def _wrapper(event: Event):
                 await e.emit(event.type, event.data, event.id)
 
-            handler = OnHandler(event_type, _wrapper)
+            handler = Handler(event_type, _wrapper)
             await self._on(f"{ip}:{port}", handler)
 
         # Store the entrypoint

@@ -7,7 +7,7 @@ from typing import (
 )
 
 from ..eventbus import EventBus
-from ..protocols import Event, OnHandler
+from ..protocols import Event, Handler
 from .aentrypoint import AEntryPoint
 
 
@@ -42,22 +42,6 @@ class EntryPoint(AEntryPoint):
         self._bus = bus
         await self.on("aiodistbus.eventbus.close", self.close)
         await self._update_handlers()
-
-    async def on(
-        self, event_type: str, handler: Callable, dtype: Optional[Type] = None
-    ):
-
-        # Track handlers (supporting wildcards)
-        if "*" not in event_type:
-            wrapped_handler = self._wrapper(handler)
-            on_handler = OnHandler(event_type, wrapped_handler, dtype)
-            self._handlers[event_type] = on_handler
-        else:
-            wrapped_handler = self._wrapper(handler, unpack=False)
-            on_handler = OnHandler(event_type, wrapped_handler, dtype)
-            self._wildcards[event_type] = on_handler
-
-        await self._update_handlers(event_type)
 
     async def emit(self, event_type: str, data: Any, id: Optional[str] = None) -> Event:
 

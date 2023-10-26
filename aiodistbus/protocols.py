@@ -15,13 +15,13 @@ class Event(DataClassJsonMixin):
 
 
 @dataclass
-class OnHandler:
+class Handler:
     event_type: str
-    handler: Callable
+    function: Callable
     dtype: Optional[Type] = None
 
 
 @dataclass
 class Subscriptions:
     entrypoint_id: str
-    handler: OnHandler
+    handler: Handler

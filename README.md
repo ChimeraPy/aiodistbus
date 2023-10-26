@@ -60,8 +60,8 @@ This is TODO
  - [x] Disconnect operation
  - [x] Bridge Implementation
  - [x] Removing dead subscribers
- - [ ] Heartbeat with handler
- - [ ] Decorator Implementation (with Namespace)
+ - [x] Heartbeat with handler
+ - [x] Decorator Implementation (with Namespace)
  - [ ] Error handling
  - [ ] Stress testing
  - [ ] Rerun pre-commit on all files

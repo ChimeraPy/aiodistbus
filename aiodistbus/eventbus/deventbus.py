@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from collections import defaultdict
-from typing import Dict, List, Optional, Type
+from typing import Dict, List, Optional, Type, Union
 
 import asyncio_atexit
 import zmq
@@ -9,6 +9,7 @@ import zmq.asyncio
 
 from ..cfg import EVENT_BLACKLIST
 from ..protocols import Event
+from ..timer import Timer
 from ..utils import reconstruct, wildcard_search
 from .eventbus import EventBus
 
@@ -16,7 +17,7 @@ logger = logging.getLogger("aiodistbus")
 
 
 class DEventBus:
-    def __init__(self, ip: str, port: int):
+    def __init__(self, ip: str, port: int = 0, pulse: Union[float, int] = 15):
         super().__init__()
 
         # Parameters
@@ -29,9 +30,16 @@ class DEventBus:
         self.snapshot = self.ctx.socket(zmq.ROUTER)
         self.publisher = self.ctx.socket(zmq.PUB)
         self.collector = self.ctx.socket(zmq.PULL)
-        self.snapshot.bind(f"tcp://{ip}:{port}")
-        self.publisher.bind(f"tcp://{ip}:{port+1}")
-        self.collector.bind(f"tcp://{ip}:{port+2}")
+
+        if port == 0:
+            port = self.snapshot.bind_to_random_port(f"tcp://{ip}")
+            self.publisher.bind(f"tcp://{ip}:{port+1}")
+            self.collector.bind(f"tcp://{ip}:{port+2}")
+            self._port = port
+        else:
+            self.snapshot.bind(f"tcp://{ip}:{port}")
+            self.publisher.bind(f"tcp://{ip}:{port+1}")
+            self.collector.bind(f"tcp://{ip}:{port+2}")
 
         # Create poller to listen to snapshot and collector
         self.poller = zmq.asyncio.Poller()
@@ -42,6 +50,11 @@ class DEventBus:
         self._flush_flag = asyncio.Event()
         self._flush_flag.clear()
         self.run_task = asyncio.create_task(self._run())
+
+        # Create a timer to pulse to all clients
+        # Letting them know if the server is alive
+        self.timer = Timer(self._pulse, pulse)
+        self.timer.start()
 
         asyncio_atexit.register(self.close)
 
@@ -122,6 +135,10 @@ class DEventBus:
                 [topic, data] = await self.collector.recv_multipart()
                 await self._collector_reactor(topic, data)
 
+    async def _pulse(self):
+        event_d = Event("aiodistbus.eventbus.pulse").to_json().encode()
+        await self._emit(b"aiodistbus.eventbus.pulse", event_d)
+
     ####################################################################
     ## Front-Facing API
     ####################################################################
@@ -146,10 +163,17 @@ class DEventBus:
     async def close(self):
 
         if self._running:
+
+            # Inform to stop
             event_d = Event("aiodistbus.eventbus.close").to_json().encode()
             await self._emit(b"aiodistbus.eventbus.close", event_d)
+
+            # Stop the main routine
             self._running = False
             await self.run_task
+
+            # Stop the pulse
+            await self.timer.stop()
 
             # Close sockets
             self.snapshot.close()

@@ -45,4 +45,7 @@ global_config = _GlobalConfig()
 ## Event Blacklist
 ########################################################################
 
-EVENT_BLACKLIST = ["aiodistbus.eventbus.close"]
+EVENT_BLACKLIST = [
+    "aiodistbus.eventbus.close",
+    "aiodistbus.eventbus.pulse",
+]
