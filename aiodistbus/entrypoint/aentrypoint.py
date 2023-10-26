@@ -7,12 +7,14 @@ from typing import Any, Callable, Coroutine, Dict, List, Optional, Type
 
 from ..protocols import Event, Handler
 from ..registry import Registry
+from ..utils import safe_coro
 
 logger = logging.getLogger("aiodistbus")
 
 
 class AEntryPoint(ABC):
     def __init__(self):
+        """Abstract entrypoint for eventbus"""
 
         # State information
         self.id = str(uuid.uuid4())
@@ -24,6 +26,21 @@ class AEntryPoint(ABC):
     def _wrapper(
         self, func: Callable, unpack: bool = True, create_task: bool = False
     ) -> Callable:
+        """Wrapper for handlers
+
+        The wrapper provides an approach for logging which events have been transmitted
+
+        Args:
+            func (Callable): Function to wrap
+            unpack (bool, optional): Unpack the event. Defaults to True.
+            create_task (bool, optional): Create a task for the handler. Defaults to False.
+
+        Returns:
+            Callable: Wrapped function
+
+        """
+
+        # Wrapper for async functions
         async def awrapper(event: Event):
             coro: Optional[Coroutine] = None
             if unpack:
@@ -38,20 +55,33 @@ class AEntryPoint(ABC):
                 coro = func(event)
 
             if coro:
+                # Create safe coro with error msg
+                scoro = safe_coro(
+                    coro, f"Error in (type: {event.type}, handler {func.__name__})"
+                )
                 if create_task:
-                    self._tasks.append(asyncio.create_task(coro))
+                    self._tasks.append(asyncio.create_task(scoro))
                 else:
-                    await coro
+                    await scoro
 
             self._received.append(event.id)
 
-        def wrapper(event: Event):
-            if unpack:
-                func(event.data)
-            else:
-                func(event)
+        # Wrapper for sync functions
+        async def wrapper(event: Event):
+
+            try:
+                if unpack:
+                    func(event.data)
+                else:
+                    func(event)
+            except Exception as e:
+                logger.error(
+                    f"Error in handler (type: {event.type}, handler {func.__name__}): {e}"
+                )
+
             self._received.append(event.id)
 
+        # Select according to function type
         if asyncio.iscoroutinefunction(func):
             return awrapper
         else:

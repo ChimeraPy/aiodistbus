@@ -1,14 +1,14 @@
 import asyncio
 import logging
-from typing import Any, Callable, Coroutine, List, Optional, Type, Union
+from typing import Any, Callable, Coroutine, List, Optional, Union
 
 import asyncio_atexit
 import zmq
 import zmq.asyncio
 
-from ..protocols import Event, Handler
+from ..protocols import Event
 from ..timer import Timer
-from ..utils import encode, reconstruct, wildcard_filtering
+from ..utils import encode, reconstruct, wildcard_search
 from .aentrypoint import AEntryPoint
 
 logger = logging.getLogger("aiodistbus")
@@ -66,9 +66,8 @@ class DEntryPoint(AEntryPoint):
                 coros: List[Coroutine] = []
                 if topic in self._handlers:
                     coros.append(self._handlers[topic].function(event))
-                for handler in self._wildcards.values():
-                    if wildcard_filtering(topic, handler.event_type):
-                        coros.append(handler.function(event))
+                for match in wildcard_search(topic, self._wildcards.keys()):
+                    coros.append(self._wildcards[match].function(event))
 
                 # Await the handlers
                 if len(coros) > 0:

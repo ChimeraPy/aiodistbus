@@ -5,6 +5,8 @@ import pytest
 
 from aiodistbus import DEntryPoint, DEventBus
 
+from .conftest import ExampleEvent
+
 logger = logging.getLogger("aiodistbus")
 
 
@@ -29,10 +31,26 @@ class CrashDEventBus(DEventBus):
             self.snapshot.close()
             self.publisher.close()
             self.collector.close()
-            # self.ctx.term()
+            self.ctx.term()
 
 
-@pytest.mark.repeat(10)
+def faulty_func(event: ExampleEvent):
+    assert isinstance(event, ExampleEvent)
+    logger.info(f"Received event {event}")
+    raise RuntimeError("Oh snap, something failed :'(")
+
+
+async def afaulty_func(event: ExampleEvent):
+    assert isinstance(event, ExampleEvent)
+    logger.info(f"Received event {event}")
+    raise RuntimeError("Oh snap, something failed :'(")
+
+
+################################################################################
+## Tests
+################################################################################
+
+
 async def test_pulse_crash_detection():
     crash_dbus = CrashDEventBus(ip="127.0.0.1", pulse=0.25)
 
@@ -59,3 +77,60 @@ async def test_pulse_crash_detection():
     # Assert
     assert crash
     await e.close()
+
+
+@pytest.mark.parametrize(
+    "func",
+    [
+        faulty_func,
+        afaulty_func,
+    ],
+)
+async def test_exception_in_handler_with_bus(bus, entrypoints, func):
+
+    # Create resources
+    e1, e2 = entrypoints
+
+    # Add funcs
+    await e1.on("faulty", func, ExampleEvent)
+
+    # Connect
+    await e1.connect(bus)
+    await e2.connect(bus)
+
+    # Send message
+    event = await e2.emit("faulty", ExampleEvent("hello"))
+
+    # Assert
+    assert event.id in e1._received
+    assert len(e1._received) == 1
+
+
+@pytest.mark.parametrize(
+    "func",
+    [
+        faulty_func,
+        afaulty_func,
+    ],
+)
+async def test_exception_in_handler_with_dbus(dbus, dentrypoints, func):
+
+    # Create resources
+    e1, e2 = dentrypoints
+
+    # Add funcs
+    await e1.on("faulty", func, ExampleEvent)
+
+    # Connect
+    await e1.connect(dbus.ip, dbus.port)
+    await e2.connect(dbus.ip, dbus.port)
+
+    # Send message
+    event = await e2.emit("faulty", ExampleEvent("hello"))
+
+    # Flush
+    await dbus.flush()
+
+    # Assert
+    assert event.id in e1._received
+    assert len(e1._received) == 1
