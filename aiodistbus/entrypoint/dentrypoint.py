@@ -30,6 +30,7 @@ class DEntryPoint(AEntryPoint):
         self._running: bool = False
         self._lock: asyncio.Lock = asyncio.Lock()
         self.run_task: Optional[asyncio.Task] = None
+        self.ctx: Optional[zmq.asyncio.Context] = None
         self.snapshot: Optional[zmq.asyncio.Socket] = None
         self.subscriber: Optional[zmq.asyncio.Socket] = None
         self.publisher: Optional[zmq.asyncio.Socket] = None
@@ -162,9 +163,6 @@ class DEntryPoint(AEntryPoint):
         await self.on("aiodistbus.eventbus.pulse", self._pulse_sub)
         await self._update_handlers()
 
-        # First, use snapshot to connect
-        await self.snapshot.send("CONNECT".encode())
-
         # Using a poller for the subscriber
         self.poller = zmq.asyncio.Poller()
         self.poller.register(self.subscriber, zmq.POLLIN)
@@ -191,9 +189,8 @@ class DEntryPoint(AEntryPoint):
                 if self.pulse_timer:
                     await self.pulse_timer.stop()
 
-                if not self.ctx.closed:
+                if self.ctx and not self.ctx.closed:
                     if self.snapshot:
-                        await self.snapshot.send("DISCONNECT".encode())
                         self.snapshot.close()
                     if self.subscriber:
                         self.subscriber.close()

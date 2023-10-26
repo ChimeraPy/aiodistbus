@@ -53,12 +53,9 @@ async def test_pulse_crash_detection():
     await asyncio.sleep(1)
 
     # Simulate running and then crashing
+    await crash_dbus.close()
     await asyncio.sleep(5)
 
     # Assert
-    # assert crash
-
-    await crash_dbus.close()
+    assert crash
     await e.close()
-
-    logger.debug(f"CRASH: {crash}")

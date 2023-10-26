@@ -22,7 +22,7 @@ class AEntryPoint(ABC):
         self._tasks: List[asyncio.Task] = []
 
     def _wrapper(
-        self, handler: Callable, unpack: bool = True, create_task: bool = False
+        self, func: Callable, unpack: bool = True, create_task: bool = False
     ) -> Callable:
         async def awrapper(event: Event):
             coro: Optional[Coroutine] = None
@@ -31,11 +31,11 @@ class AEntryPoint(ABC):
                     type(event.data) is not type(None)
                     and self._handlers[event.type].dtype
                 ):
-                    coro = handler(event.data)
+                    coro = func(event.data)
                 else:
-                    coro = handler()
+                    coro = func()
             else:
-                coro = handler(event)
+                coro = func(event)
 
             if coro:
                 if create_task:
@@ -47,12 +47,12 @@ class AEntryPoint(ABC):
 
         def wrapper(event: Event):
             if unpack:
-                handler(event.data)
+                func(event.data)
             else:
-                handler(event)
+                func(event)
             self._received.append(event.id)
 
-        if asyncio.iscoroutinefunction(handler):
+        if asyncio.iscoroutinefunction(func):
             return awrapper
         else:
             return wrapper
@@ -66,7 +66,6 @@ class AEntryPoint(ABC):
     ####################################################################
 
     async def use(self, registry: Registry, namespace: str = "default"):
-
         # Obtain the handlers
         for event_type, handler in registry.get_handlers(namespace).items():
             await self.on(event_type, handler.function, handler.dtype)

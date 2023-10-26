@@ -15,51 +15,51 @@ class ExampleEvent(DataClassJsonMixin):
     msg: str
 
 
-async def handler(event: ExampleEvent):
+async def func(event: ExampleEvent):
     assert isinstance(event, ExampleEvent)
     logger.info(f"Received event {event}")
 
 
-async def handler_str(event: str):
+async def func_str(event: str):
     assert isinstance(event, str)
     logger.info(f"Received event {event}")
 
 
-async def handler_bytes(event: bytes):
+async def func_bytes(event: bytes):
     assert isinstance(event, bytes)
     logger.info(f"Received event {event}")
 
 
-async def handler_int(event: int):
+async def func_int(event: int):
     assert isinstance(event, int)
     logger.info(f"Received event {event}")
 
 
-async def handler_float(event: float):
+async def func_float(event: float):
     assert isinstance(event, float)
     logger.info(f"Received event {event}")
 
 
-async def handler_bool(event: bool):
+async def func_bool(event: bool):
     assert isinstance(event, bool)
     logger.info(f"Received event {event}")
 
 
-async def handler_none():
+async def func_none():
     logger.info(f"Received event for None")
 
 
-async def handler_dict(event: dict):
+async def func_dict(event: dict):
     assert isinstance(event, dict)
     logger.info(f"Received event {event}")
 
 
-async def handler_list(event: List[str]):
+async def func_list(event: List[str]):
     assert isinstance(event, List)
     logger.info(f"Received event {event}")
 
 
-async def wildcard_handler(event: Event):
+async def wildcard_func(event: Event):
     assert isinstance(event, Event)
     logger.info(f"Received event {event}")
 
