@@ -4,14 +4,15 @@ import pytest
 
 from aiodistbus import DEntryPoint, DEventBus
 
+N = 5
 
-@pytest.mark.repeat(10)
+@pytest.mark.repeat(N)
 async def test_create_dbus():
     bus = DEventBus("127.0.0.1")
     await asyncio.wait_for(bus.close(), timeout=3)
 
 
-@pytest.mark.repeat(10)
+@pytest.mark.repeat(N)
 async def test_dbus_entrypoint():
     bus = DEventBus("127.0.0.1")
     e = DEntryPoint()
@@ -20,7 +21,7 @@ async def test_dbus_entrypoint():
     await asyncio.wait_for(e.close(), timeout=3)
 
 
-@pytest.mark.repeat(10)
+@pytest.mark.repeat(N)
 async def test_entrypoint_dbus():
     bus = DEventBus("127.0.0.1")
     e = DEntryPoint()

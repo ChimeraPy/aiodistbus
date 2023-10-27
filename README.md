@@ -62,7 +62,7 @@ This is TODO
  - [x] Removing dead subscribers
  - [x] Heartbeat with handler
  - [x] Decorator Implementation (with Namespace)
- - [ ] Error handling
+ - [x] Error handling
  - [ ] Stress testing
  - [ ] Automated testing via GitHub actions
  - [ ] Rerun pre-commit on all files
