@@ -1,11 +1,12 @@
 import asyncio
 import logging
+import os
 
 import pytest
 
 from aiodistbus import DEntryPoint, DEventBus
 
-from .conftest import ExampleEvent
+from .conftest import ExampleEvent, func
 
 logger = logging.getLogger("aiodistbus")
 
@@ -134,3 +135,48 @@ async def test_exception_in_handler_with_dbus(dbus, dentrypoints, func):
     # Assert
     assert event.id in e1._received
     assert len(e1._received) == 1
+
+
+async def test_exception_in_encoder(dbus, dentrypoints):
+
+    # Create resources
+    e1, e2 = dentrypoints
+
+    # Add funcs
+    await e1.on("test", func, ExampleEvent)
+
+    # Connect
+    await e1.connect(dbus.ip, dbus.port)
+    await e2.connect(dbus.ip, dbus.port)
+
+    # Send message
+    f = open("test.txt", "w")
+    _ = await e2.emit("test", f)
+
+    # Remove file
+    try:
+        os.remove("test.txt")
+    except FileNotFoundError:
+        pass
+
+    # Flush
+    await dbus.flush()
+
+
+async def test_exception_in_decoder(dbus, dentrypoints):
+
+    # Create resources
+    e1, e2 = dentrypoints
+
+    # Add funcs
+    await e1.on("test", func, ExampleEvent)
+
+    # Connect
+    await e1.connect(dbus.ip, dbus.port)
+    await e2.connect(dbus.ip, dbus.port)
+
+    # Send message
+    _ = await e2.emit("test", ["msg", "hello"])
+
+    # Need to flush
+    await dbus.flush()

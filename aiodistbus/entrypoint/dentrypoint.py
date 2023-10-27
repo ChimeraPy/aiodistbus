@@ -60,7 +60,11 @@ class DEntryPoint(AEntryPoint):
                     known_type = self._handlers[topic].dtype
                 else:
                     known_type = None
-                event = await reconstruct(event, known_type)
+                try:
+                    event = await reconstruct(event, known_type)
+                except Exception as e:
+                    logger.error(f"aiodistbus: Failed to reconstruct: {event} - {e}")
+                    continue
 
                 # Obtain the handlers
                 coros: List[Coroutine] = []
@@ -118,12 +122,27 @@ class DEntryPoint(AEntryPoint):
     async def emit(
         self, event_type: str, data: Any, id: Optional[str] = None
     ) -> Optional[Event]:
+        """Emit an event
+
+        Args:
+            event_type (str): Event type
+            data (Any): Data to send
+            id (Optional[str], optional): Event ID. Defaults to None.
+
+        Returns:
+            Optional[Event]: Event object
+
+        """
         if not self.snapshot or not self.publisher:
             logger.warning("Not connected to server")
             return None
 
         # Encode data
-        data = encode(data)
+        try:
+            data = encode(data)
+        except ValueError:
+            logger.error(f"aiodistbus: Failed to encode: {data}")
+            return None
 
         # Package data with an Event object
         if id:
@@ -143,7 +162,14 @@ class DEntryPoint(AEntryPoint):
         return event
 
     async def connect(self, ip: str, port: int, on_disrupt: Optional[Callable] = None):
+        """Connect to EventBus server
 
+        Args:
+            ip (str): IP address
+            port (int): Port
+            on_disrupt (Optional[Callable], optional): Callback on disruption. Defaults to None.
+
+        """
         self.ctx = zmq.asyncio.Context()
         self.snapshot = self.ctx.socket(zmq.DEALER)
         self.snapshot.setsockopt(zmq.IDENTITY, self.id.encode("utf-8"))
@@ -174,6 +200,7 @@ class DEntryPoint(AEntryPoint):
         self.pulse_timer.start()
 
     async def close(self):
+        """Close the EventBus client"""
 
         # If not closed already, close
         async with self._lock:

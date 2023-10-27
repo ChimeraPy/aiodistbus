@@ -38,13 +38,29 @@ class EntryPoint(AEntryPoint):
     ####################################################################################################################
 
     async def connect(self, bus: EventBus):
+        """Connect to a bus
+
+        Args:
+            bus (EventBus): EventBus to connect to
+
+        """
         # Add bus and default handlers
         self._bus = bus
         await self.on("aiodistbus.eventbus.close", self.close)
         await self._update_handlers()
 
     async def emit(self, event_type: str, data: Any, id: Optional[str] = None) -> Event:
+        """Emit an event
 
+        Args:
+            event_type (str): Event type
+            data (Any): Data to send
+            id (Optional[str], optional): Event ID. Defaults to None.
+
+        Returns:
+            Event: Event object
+
+        """
         # Constructing event
         if id:
             event = Event(event_type, data, id)
@@ -58,6 +74,7 @@ class EntryPoint(AEntryPoint):
         return event
 
     async def close(self):
+        """Close the entrypoint"""
         if self._bus:
             self._bus._remove(self.id)
             self._bus = None

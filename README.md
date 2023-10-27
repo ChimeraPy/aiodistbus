@@ -64,5 +64,6 @@ This is TODO
  - [x] Decorator Implementation (with Namespace)
  - [ ] Error handling
  - [ ] Stress testing
+ - [ ] Automated testing via GitHub actions
  - [ ] Rerun pre-commit on all files
  - [ ] Improve documentation
