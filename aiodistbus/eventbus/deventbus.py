@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import zlib
 from collections import defaultdict
 from typing import Dict, List, Optional, Type, Union
 
@@ -10,7 +11,7 @@ import zmq.asyncio
 from ..cfg import EVENT_BLACKLIST
 from ..protocols import Event
 from ..timer import Timer
-from ..utils import reconstruct, wildcard_search
+from ..utils import reconstruct, verify_checksum, wildcard_search
 from .eventbus import EventBus
 
 logger = logging.getLogger("aiodistbus")
@@ -70,17 +71,19 @@ class DEventBus:
     def port(self):
         return self._port
 
-    async def _emit(self, topic: bytes, msg: bytes):
-        await self.publisher.send_multipart([topic, msg])
+    async def _emit(self, topic: bytes, msg: bytes, checksum: Optional[bytes] = None):
+        if checksum is None:
+            checksum = zlib.crc32(msg).to_bytes(4, "big")
+        await self.publisher.send_multipart([topic, msg, checksum])
 
     async def _snapshot_reactor(self, id: str, msg: bytes):
         ...
         # logger.debug(f"ROUTER: Received {id}: {msg}")
 
-    async def _collector_reactor(self, topic: bytes, msg: bytes):
+    async def _collector_reactor(self, topic: bytes, msg: bytes, checksum: bytes):
 
         # Broadcast via socket
-        await self._emit(topic, msg)
+        await self._emit(topic, msg, checksum)
 
         # Only perform this if we have local buses
         if len(self._lbuses_wildcard) == 0 and len(self._lbuses_subs) == 0:
@@ -132,8 +135,13 @@ class DEventBus:
                 await self._snapshot_reactor(id.decode(), msg)
 
             if self.collector in events:
-                [topic, data] = await self.collector.recv_multipart()
-                await self._collector_reactor(topic, data)
+                [topic, data, checksum] = await self.collector.recv_multipart()
+
+                # Check if the checksum is correct
+                if verify_checksum(data, checksum):
+                    await self._collector_reactor(topic, data, checksum)
+                else:
+                    logger.error("aiodistbus: Checksum failed for %s", topic.decode())
 
     async def _pulse(self):
         event_d = Event("aiodistbus.eventbus.pulse").to_json().encode()

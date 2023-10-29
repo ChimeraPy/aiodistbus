@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import zlib
 from typing import Any, Callable, Coroutine, List, Optional, Union
 
 import asyncio_atexit
@@ -8,7 +9,7 @@ import zmq.asyncio
 
 from ..protocols import Event
 from ..timer import Timer
-from ..utils import encode, reconstruct, wildcard_search
+from ..utils import encode, reconstruct, verify_checksum, wildcard_search
 from .aentrypoint import AEntryPoint
 
 logger = logging.getLogger("aiodistbus")
@@ -50,7 +51,15 @@ class DEntryPoint(AEntryPoint):
                 continue
 
             for s in events:
-                [topic, event] = await s.recv_multipart()
+                [topic, event, checksum] = await s.recv_multipart()
+
+                # Before further processing, perform checksum
+                if not verify_checksum(event, checksum):
+                    logger.error(
+                        f"aiodistbus: Checksum failed: {event.decode('utf-8')}"
+                    )
+                    continue
+
                 topic = topic.decode("utf-8")
                 event = event.decode("utf-8")
                 # logger.debug(f"SUBSCRIBER: Received {topic} - {event}")
@@ -150,11 +159,21 @@ class DEntryPoint(AEntryPoint):
         else:
             event = Event(event_type, data)
 
+        # Serliaze the event
+        serialized_event = event.to_json().encode()
+
+        # Compute checksum
+        checksum = zlib.crc32(serialized_event)
+
         # Send the data
         # logger.debug(f"PUBLISHER: {event}")
         try:
             await self.publisher.send_multipart(
-                [event_type.encode("utf-8"), event.to_json().encode()]
+                [
+                    event_type.encode("utf-8"),
+                    serialized_event,
+                    checksum.to_bytes(4, "big"),
+                ]
             )
         except zmq.error.ZMQError:
             logger.error("Could not send event")

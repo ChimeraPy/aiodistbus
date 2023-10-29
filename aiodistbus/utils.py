@@ -1,4 +1,5 @@
 import logging
+import zlib
 from typing import Any, Coroutine, Iterable, List, Optional, Type
 
 from dataclasses_json import DataClassJsonMixin
@@ -156,3 +157,22 @@ def encode(data: Any) -> bytes:
 
     # Encode the data
     return encoder(data)
+
+
+#############################################################################
+## Checksum
+#############################################################################
+
+
+def verify_checksum(data: bytes, checksum: bytes) -> bool:
+    """Verify the checksum of data
+
+    Args:
+        data (bytes): Data to verify
+        checksum (bytes): Checksum to verify against
+
+    Returns:
+        bool: True if checksum is correct
+
+    """
+    return zlib.crc32(data) == int.from_bytes(checksum, "big")

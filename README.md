@@ -63,6 +63,10 @@ This is TODO
  - [x] Heartbeat with handler
  - [x] Decorator Implementation (with Namespace)
  - [x] Error handling
+ - [x] Multiprocessing testing
+ - [x] Message Hashsum
+ - [ ] Dataclass Decorator
+ - [ ] Debounding option
  - [ ] Stress testing
  - [ ] Automated testing via GitHub actions
  - [ ] Rerun pre-commit on all files

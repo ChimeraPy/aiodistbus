@@ -1,4 +1,5 @@
 import logging
+import platform
 from dataclasses import dataclass
 from typing import List
 
@@ -8,6 +9,11 @@ from dataclasses_json import DataClassJsonMixin
 from aiodistbus import DEntryPoint, DEventBus, EntryPoint, Event, EventBus
 
 logger = logging.getLogger("aiodistbus")
+current_platform = platform.system()
+
+linux_run_only = pytest.mark.skipif(
+    current_platform != "Linux", reason="Test only can run on Linux"
+)
 
 
 @dataclass
