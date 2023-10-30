@@ -2,7 +2,7 @@ import logging
 import uuid
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Dict, Type
+from typing import Dict
 
 from ..protocols import Event, Subscriptions
 
@@ -26,19 +26,7 @@ class AEventBus(ABC):
         return self._uuid
 
     @abstractmethod
-    async def _on(self, event_type: str, dtype: Type):
-        ...
-
-    @abstractmethod
     async def _emit(self, event: Event):
-        ...
-
-    @abstractmethod
-    async def forward(self, event_type: str):
-        ...
-
-    # @abstractmethod
-    async def deforward(self, event_type: str):
         ...
 
     @abstractmethod

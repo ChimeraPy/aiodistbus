@@ -121,13 +121,23 @@ class AEntryPoint(ABC):
         await self._update_handlers(event_type)
 
     @abstractmethod
-    async def connect(self):
-        ...
+    async def emit(
+        self, event_type: str, data: Any, id: Optional[str] = None
+    ) -> Optional[Event]:
+        """Emit an event
 
-    @abstractmethod
-    async def emit(self, event_type: str, data: Any) -> Event:
+        Args:
+            event_type (str): Event type
+            data (Any): Data to send
+            id (Optional[str], optional): Event ID. Defaults to None.
+
+        Returns:
+            Optional[Event]: Event object
+
+        """
         ...
 
     @abstractmethod
     async def close(self):
+        """Close the entrypoint"""
         ...

@@ -1,14 +1,15 @@
 import asyncio
+import logging
 from typing import (
     Any,
-    Callable,
     Optional,
-    Type,
 )
 
 from ..eventbus import EventBus
-from ..protocols import Event, Handler
+from ..protocols import Event
 from .aentrypoint import AEntryPoint
+
+logger = logging.getLogger("aiodistbus")
 
 
 class EntryPoint(AEntryPoint):
@@ -49,7 +50,9 @@ class EntryPoint(AEntryPoint):
         await self.on("aiodistbus.eventbus.close", self.close)
         await self._update_handlers()
 
-    async def emit(self, event_type: str, data: Any, id: Optional[str] = None) -> Event:
+    async def emit(
+        self, event_type: str, data: Any, id: Optional[str] = None
+    ) -> Optional[Event]:
         """Emit an event
 
         Args:
@@ -61,6 +64,10 @@ class EntryPoint(AEntryPoint):
             Event: Event object
 
         """
+        if self._bus is None:
+            logger.error("aiodistbus: Not connected to a bus")
+            return None
+
         # Constructing event
         if id:
             event = Event(event_type, data, id)

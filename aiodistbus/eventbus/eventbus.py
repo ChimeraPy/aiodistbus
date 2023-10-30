@@ -2,7 +2,7 @@ import asyncio
 import logging
 import typing
 from collections import defaultdict
-from typing import Coroutine, Dict, Iterable, List, Optional, Type
+from typing import Coroutine, Dict, Iterable, List, Optional, Type, Union
 
 from ..protocols import Event, Handler, Subscriptions
 from ..utils import wildcard_search
@@ -19,7 +19,7 @@ class EventBus(AEventBus):
         super().__init__()
         self._running = True
         self._wildcard_subs: Dict[str, Dict[str, Subscriptions]] = defaultdict(dict)
-        self._dtypes: Dict[str, Type] = {}
+        self._dtypes: Dict[str, Union[Type, None]] = {}
         self._dentrypoints: Dict[str, DEntryPoint] = {}
 
     async def _on(self, id: str, handler: Handler):
