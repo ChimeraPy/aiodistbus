@@ -32,6 +32,7 @@ test = [
     'pytest-asyncio',
     'pytest-repeat',
     'pytest-lazy-fixture',
+    'pytest-rerunfailures',
     'auto-changelog',
     'coveralls',
     'pre-commit',
