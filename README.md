@@ -67,7 +67,7 @@ This is TODO
  - [x] Message Hashsum
  - [x] Dataclass Decorator
  - [x] Debounding option
- - [ ] Connect Timeout Exception
+ - [x] Connect Timeout Exception
  - [ ] Stress testing
  - [x] Automated testing via GitHub actions
  - [ ] Rerun pre-commit on all files

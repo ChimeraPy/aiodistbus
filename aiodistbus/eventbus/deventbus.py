@@ -76,9 +76,13 @@ class DEventBus:
             checksum = zlib.crc32(msg).to_bytes(4, "big")
         await self.publisher.send_multipart([topic, msg, checksum])
 
-    async def _snapshot_reactor(self, id: str, msg: bytes):
-        ...
+    async def _snapshot_reactor(self, id: bytes, msg: bytes):
         # logger.debug(f"ROUTER: Received {id}: {msg}")
+
+        # Decode message
+        dmsg = msg.decode()
+        if dmsg == "aiodistbus.eventbus.connect":
+            await self.snapshot.send_multipart([id, b"aiodistbus.eventbus.handshake"])
 
     async def _collector_reactor(self, topic: bytes, msg: bytes, checksum: bytes):
 
@@ -132,7 +136,7 @@ class DEventBus:
 
             if self.snapshot in events:
                 [id, msg] = await self.snapshot.recv_multipart()
-                await self._snapshot_reactor(id.decode(), msg)
+                await self._snapshot_reactor(id, msg)
 
             if self.collector in events:
                 [topic, data, checksum] = await self.collector.recv_multipart()

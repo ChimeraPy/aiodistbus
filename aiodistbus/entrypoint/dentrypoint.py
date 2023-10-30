@@ -29,6 +29,7 @@ class DEntryPoint(AEntryPoint):
 
         # Primary ZeroMQ Client
         self._running: bool = False
+        self._connected: asyncio.Event = asyncio.Event()
         self._lock: asyncio.Lock = asyncio.Lock()
         self.run_task: Optional[asyncio.Task] = None
         self.ctx: Optional[zmq.asyncio.Context] = None
@@ -40,6 +41,7 @@ class DEntryPoint(AEntryPoint):
 
     async def _run(self):
         assert self.subscriber, "SUB socket not initialized"
+        assert self.snapshot, "SNAPSHOT socket not initialized"
 
         # After connect and identify established, listen
         while self._running:
@@ -50,8 +52,15 @@ class DEntryPoint(AEntryPoint):
             if len(events) == 0:
                 continue
 
-            for s in events:
-                [topic, event, checksum] = await s.recv_multipart()
+            if self.snapshot in events:
+                msg = await self.snapshot.recv_multipart()
+                dmsg = msg[0].decode("utf-8")
+
+                if dmsg == "aiodistbus.eventbus.handshake":
+                    self._connected.set()
+
+            if self.subscriber in events:
+                [topic, event, checksum] = await self.subscriber.recv_multipart()
 
                 # Before further processing, perform checksum
                 if not verify_checksum(event, checksum):
@@ -180,13 +189,22 @@ class DEntryPoint(AEntryPoint):
             return None
         return event
 
-    async def connect(self, ip: str, port: int, on_disrupt: Optional[Callable] = None):
+    async def connect(
+        self,
+        ip: str,
+        port: int,
+        on_disrupt: Optional[Callable] = None,
+        timeout: Optional[Union[float, int]] = None,
+    ):
         """Connect to EventBus server
 
         Args:
             ip (str): IP address
             port (int): Port
             on_disrupt (Optional[Callable], optional): Callback on disruption. Defaults to None.
+
+        Exceptions:
+            asyncio.TimeoutError: If timeout is reached
 
         """
         self.ctx = zmq.asyncio.Context()
@@ -210,7 +228,15 @@ class DEntryPoint(AEntryPoint):
         # Using a poller for the subscriber
         self.poller = zmq.asyncio.Poller()
         self.poller.register(self.subscriber, zmq.POLLIN)
+        self.poller.register(self.snapshot, zmq.POLLIN)
         self.run_task = asyncio.create_task(self._run())
+
+        # Send a connect msg
+        await self.snapshot.send("aiodistbus.eventbus.connect".encode("utf-8"))
+        if timeout:
+            await asyncio.wait_for(self._connected.wait(), timeout=timeout)
+        else:
+            await self._connected.wait()
 
         # Create task check the pulse
         if on_disrupt:
