@@ -253,6 +253,7 @@ class DEntryPoint(AEntryPoint):
 
                 # Stop the main task
                 self._running = False
+                self._connected.clear()
                 if self.run_task:
                     await self.run_task
 

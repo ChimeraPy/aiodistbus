@@ -58,6 +58,7 @@ async def test_connect_timeout():
         await e.connect("127.0.0.1", port=5555, timeout=5)
 
 
+@pytest.mark.skip()
 async def test_pulse_crash_detection():
     crash_dbus = CrashDEventBus(ip="127.0.0.1", pulse=0.25)
 

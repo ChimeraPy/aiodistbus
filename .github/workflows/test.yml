@@ -59,7 +59,7 @@ jobs:
 
       - name: Perform faster tests
         run: |
-          ${{ steps.cp39.outputs.python-path }} -m coverage run --source=aiodistbus -m pytest -v --reruns 5 --color yes --reruns-delay 5 -m test
+          ${{ steps.cp39.outputs.python-path }} -m coverage run --source=aiodistbus -m pytest -v --reruns 5 --color yes --reruns-delay 5
           ${{ steps.cp39.outputs.python-path }} -m coverage combine --append
 
       - name: Upload coverage data to coveralls.io
