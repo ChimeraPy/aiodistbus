@@ -65,8 +65,9 @@ This is TODO
  - [x] Error handling
  - [x] Multiprocessing testing
  - [x] Message Hashsum
- - [ ] Dataclass Decorator
- - [ ] Debounding option
+ - [x] Dataclass Decorator
+ - [x] Debounding option
+ - [ ] Connect Timeout Exception
  - [ ] Stress testing
  - [ ] Automated testing via GitHub actions
  - [ ] Rerun pre-commit on all files
