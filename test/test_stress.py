@@ -6,7 +6,6 @@ from typing import List
 
 import pytest
 from dataclasses_json import DataClassJsonMixin
-from tqdm import tqdm
 
 from aiodistbus import DEntryPoint, DEventBus
 
@@ -64,7 +63,7 @@ async def test_bus_emit_stress(bus, entrypoints):
 
     # Send message
     events: List = []
-    for _ in tqdm(range(M)):
+    for _ in range(M):
         instance = StressTestEvent(str(uuid.uuid4()))
         event = await e2.emit("test", instance)
         events.append(event)
