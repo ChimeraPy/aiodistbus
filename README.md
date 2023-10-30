@@ -22,6 +22,8 @@ For installing the package, download from PYPI and install with ``pip``:
 pip install aiodistbus
 ```
 
+Here is a link to the [Documentation](https://aiodistbus.readthedocs.io/en/latest/). If you encounter any issues in terms of code or documentation, please don't hesitate to make an issue.
+
 ## EventBus Example
 
 TODO

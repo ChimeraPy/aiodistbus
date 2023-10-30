@@ -33,7 +33,7 @@ async def func_str(event: str):
 
 async def func_bytes(event: bytes):
     assert isinstance(event, bytes)
-    logger.info(f"Received event {event}")
+    logger.info("Received event %s", event)
 
 
 async def func_int(event: int):
@@ -52,7 +52,7 @@ async def func_bool(event: bool):
 
 
 async def func_none():
-    logger.info(f"Received event for None")
+    logger.info("Received event for None")
 
 
 async def func_dict(event: dict):
