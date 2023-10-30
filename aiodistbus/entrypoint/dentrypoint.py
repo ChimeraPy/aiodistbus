@@ -71,7 +71,7 @@ class DEntryPoint(AEntryPoint):
 
                 topic = topic.decode("utf-8")
                 event = event.decode("utf-8")
-                # logger.debug(f"SUBSCRIBER: Received {topic} - {event}")
+                # logger.debug(f"SUBSCRIBER: Received {topic} - {event} - {len(self._received)}")
 
                 # Reconstruct the data
                 if topic in self._handlers:
@@ -215,7 +215,6 @@ class DEntryPoint(AEntryPoint):
         self.subscriber.connect(f"tcp://{ip}:{port+1}")
         self.publisher = self.ctx.socket(zmq.PUSH)
         self.publisher.connect(f"tcp://{ip}:{port+2}")
-        await asyncio.sleep(0.3)
 
         # Avoid making any socket linger
         self.snapshot.linger = 0

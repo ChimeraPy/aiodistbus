@@ -20,7 +20,7 @@ class AEntryPoint(ABC):
         self.id = str(uuid.uuid4())
         self._handlers: Dict[str, Handler] = {}
         self._wildcards: Dict[str, Handler] = {}
-        self._received: deque[str] = deque(maxlen=10)
+        self._received: deque[str] = deque(maxlen=1000)
         self._tasks: List[asyncio.Task] = []
 
     def _wrapper(

@@ -68,7 +68,7 @@ This is TODO
  - [x] Dataclass Decorator
  - [x] Debounding option
  - [x] Connect Timeout Exception
- - [ ] Stress testing
+ - [x] Stress testing
  - [x] Automated testing via GitHub actions
  - [ ] Rerun pre-commit on all files
  - [ ] Improve documentation
