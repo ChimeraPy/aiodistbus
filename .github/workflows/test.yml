@@ -81,7 +81,7 @@ jobs:
     steps:
     - name: Finished
       run: |
-        ${{ steps.cp39.outputs.python-path }} -m pip install --upgrade coveralls
+        python -m pip install --upgrade coveralls
         coveralls --service=github --finish
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

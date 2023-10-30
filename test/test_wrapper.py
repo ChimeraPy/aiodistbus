@@ -6,7 +6,7 @@ from typing import Dict, List
 import pytest
 from dataclasses_json import DataClassJsonMixin
 
-from aiodistbus import DataClassEvent, make_evented
+from aiodistbus import make_evented
 
 logger = logging.getLogger("aiodistbus")
 
