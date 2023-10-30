@@ -27,11 +27,13 @@ class DEventBus(AEventBus):
 
     """
 
-    def __init__(self, ip: str, port: int = 0, pulse: Union[float, int] = 15):
+    def __init__(
+        self, ip: str = "127.0.0.1", port: int = 0, pulse: Union[float, int] = 15
+    ):
         """Initialize the distributed eventbus
 
         Args:
-            ip (str): IP address to bind to
+            ip (str): IP address to bind to. Defaults to '127.0.0.1'
             port (int, optional): Port to bind to. Defaults to 0.
             pulse (Union[float, int], optional): Pulse interval. Defaults to 15.
 
