@@ -55,10 +55,11 @@ async def afaulty_func(event: ExampleEvent):
 async def test_connect_timeout():
     e = DEntryPoint()
     with pytest.raises(asyncio.TimeoutError):
-        await e.connect("127.0.0.1", port=5555, timeout=5)
+        await e.connect("127.0.0.1", port=5555, timeout=2)
+
+    await e.close()
 
 
-@pytest.mark.skip()
 async def test_pulse_crash_detection():
     crash_dbus = CrashDEventBus(ip="127.0.0.1", pulse=0.25)
 

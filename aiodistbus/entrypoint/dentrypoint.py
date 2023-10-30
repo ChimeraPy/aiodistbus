@@ -217,6 +217,11 @@ class DEntryPoint(AEntryPoint):
         self.publisher.connect(f"tcp://{ip}:{port+2}")
         await asyncio.sleep(0.3)
 
+        # Avoid making any socket linger
+        self.snapshot.linger = 0
+        self.subscriber.linger = 0
+        self.publisher.linger = 0
+
         # Keeping track of state
         self._running = True
 
@@ -262,9 +267,11 @@ class DEntryPoint(AEntryPoint):
                     await self.pulse_timer.stop()
 
                 if self.ctx and not self.ctx.closed:
-                    if self.snapshot:
+                    if self.snapshot and not self.snapshot.closed:
                         self.snapshot.close()
-                    if self.subscriber:
+                    if self.subscriber and not self.subscriber.closed:
                         self.subscriber.close()
-                    if self.publisher:
+                    if self.publisher and not self.publisher.closed:
                         self.publisher.close()
+
+                    self.ctx.term()
