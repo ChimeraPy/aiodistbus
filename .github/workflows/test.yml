@@ -1,0 +1,86 @@
+name: Test
+
+# Look at this: https://github.com/iterative/dvc/pull/7213
+# Forum: https://discuss.dvc.org/t/cml-github-actions-google-drive-service-account/795/3?fbclid=IwAR21DBJ3bP2m3VwZ7EUp4U1ik0YQbNRgAIdemg14msCC7UtnaBao81oTTDE
+# https://github.com/iterative/cml#using-cml-with-dvc
+# https://github.com/iterative/dvc.org/blob/master/content/docs/user-guide/setup-google-drive-remote.md
+# https://www.ravirajag.dev/blog/mlops-github-actions
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  RUNNING_ON_GA: GA
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    # The process
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        id: cp39
+        with:
+          python-version: 3.9
+
+      - uses: actions/checkout@v2
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          ${{ steps.cp39.outputs.python-path }} -m pip install --upgrade pip
+          ${{ steps.cp39.outputs.python-path }} -m pip install '.[test]'
+
+      - name: Install MacOS dependencies
+        if: matrix.os == 'macos-latest'
+        run: |
+          ${{ steps.cp39.outputs.python-path }} -m pip install --upgrade pip
+          ${{ steps.cp39.outputs.python-path }} -m pip install '.[test]'
+          echo "MANUAL_OS_SET=Darwin" >> $GITHUB_ENV
+
+      - name: Install Windows dependencies
+        if: matrix.os == 'windows-latest'
+        run: |
+          ${{ steps.cp39.outputs.python-path }} -m pip install --upgrade pip
+          ${{ steps.cp39.outputs.python-path }} -m pip install .[test]
+          echo "MANUAL_OS_SET=Windows" >> $GITHUB_ENV
+
+      - name: Perform faster tests
+        run: |
+          ${{ steps.cp39.outputs.python-path }} -m coverage run --source=chimerapy -m pytest -v --reruns 5 --color yes --reruns-delay 5 -m test
+          ${{ steps.cp39.outputs.python-path }} -m coverage combine --append
+
+      - name: Upload coverage data to coveralls.io
+        if : matrix.os == 'ubuntu-latest'
+        run: coveralls --service=github
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COVERALLS_FLAG_NAME: ${{ matrix.test-name }}
+          COVERALLS_PARALLEL: true
+
+
+  coveralls:
+    name: Indicate completion to coveralls.io
+    needs: test
+    runs-on: ubuntu-latest
+    container: python:3-slim
+    if: github.ref == 'refs/heads/main'
+    steps:
+    - name: Finished
+      run: |
+        ${{ steps.cp39.outputs.python-path }} -m pip install --upgrade coveralls
+        coveralls --service=github --finish
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -69,6 +69,6 @@ This is TODO
  - [x] Debounding option
  - [ ] Connect Timeout Exception
  - [ ] Stress testing
- - [ ] Automated testing via GitHub actions
+ - [x] Automated testing via GitHub actions
  - [ ] Rerun pre-commit on all files
  - [ ] Improve documentation
