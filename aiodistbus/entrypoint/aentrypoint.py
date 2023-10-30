@@ -39,7 +39,6 @@ class AEntryPoint(ABC):
             Callable: Wrapped function
 
         """
-
         # Wrapper for async functions
         async def awrapper(event: Event):
             coro: Optional[Coroutine] = None
@@ -96,6 +95,13 @@ class AEntryPoint(ABC):
     ####################################################################
 
     async def use(self, registry: Registry, namespace: str = "default"):
+        """Use a registry
+
+        Args:
+            registry (Registry): Registry to use
+            namespace (str, optional): Namespace. Defaults to "default".
+
+        """
         # Obtain the handlers
         for event_type, handler in registry.get_handlers(namespace).items():
             await self.on(event_type, handler.function, handler.dtype)
@@ -107,7 +113,23 @@ class AEntryPoint(ABC):
         dtype: Optional[Type] = None,
         create_task: bool = False,
     ):
+        """Register a handler
 
+        Args:
+            event_type (str): Event type
+            func (Callable): Function to call
+            dtype (Optional[Type], optional): Data type. Defaults to None.
+            create_task (bool, optional): Create a task for the handler. Defaults to False.
+
+        Examples:
+            >>> from aiodistbus import AEntryPoint
+            >>> ep = AEntryPoint()
+            >>> async def test_handler():
+            ...     print("Hello World")
+            ...
+            >>> await ep.on("test", test_handler)
+
+        """
         # Track handlers (supporting wildcards)
         if "*" not in event_type:
             wrapped_func = self._wrapper(func, create_task=create_task)

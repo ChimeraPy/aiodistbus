@@ -4,12 +4,18 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Dict
 
-from ..protocols import Event, Subscriptions
+from ..protocols import Subscriptions
 
 logger = logging.getLogger(__name__)
 
 
 class AEventBus(ABC):
+    """Abstract eventbus
+
+    This class is the abstract base class for all eventbuses
+
+    """
+
     def __init__(self):
 
         # State information
@@ -24,10 +30,6 @@ class AEventBus(ABC):
     @property
     def uuid(self) -> str:
         return self._uuid
-
-    @abstractmethod
-    async def _emit(self, event: Event):
-        ...
 
     @abstractmethod
     async def close(self):

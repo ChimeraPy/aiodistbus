@@ -2,6 +2,28 @@ import asyncio
 
 
 class Timer:
+    """Timer class to run a callback every interval
+
+    Args:
+        callback (Callable): Callback to run
+        interval (float): Interval in seconds
+
+    Examples:
+        >>> import asyncio
+        >>> from aiodistbus import Timer
+        >>> async def callback():
+        ...     print("Hello")
+        ...
+        >>> timer = Timer(callback, 1)
+        >>> timer.start()
+        >>> await asyncio.sleep(3)
+        Hello
+        Hello
+        Hello
+        >>> await timer.stop()
+
+    """
+
     def __init__(self, callback, interval):
         self._callback = callback
         self._interval = interval

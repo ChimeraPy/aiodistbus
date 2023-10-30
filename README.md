@@ -54,21 +54,6 @@ await e2.close()
 
 ## Bridge between Local and Distributed
 
-This is TODO
+```python
 
-# TODO
- - [x] Disconnect operation
- - [x] Bridge Implementation
- - [x] Removing dead subscribers
- - [x] Heartbeat with handler
- - [x] Decorator Implementation (with Namespace)
- - [x] Error handling
- - [x] Multiprocessing testing
- - [x] Message Hashsum
- - [x] Dataclass Decorator
- - [x] Debounding option
- - [x] Connect Timeout Exception
- - [x] Stress testing
- - [x] Automated testing via GitHub actions
- - [ ] Rerun pre-commit on all files
- - [ ] Improve documentation
+```

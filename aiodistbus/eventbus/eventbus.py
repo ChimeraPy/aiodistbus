@@ -15,6 +15,13 @@ if typing.TYPE_CHECKING:
 
 
 class EventBus(AEventBus):
+    """Eventbus
+
+    This class is the eventbus. It handles all subscriptions and emits events to
+    the appropriate handlers.
+
+    """
+
     def __init__(self):
         super().__init__()
         self._running = True
@@ -75,6 +82,19 @@ class EventBus(AEventBus):
     async def forward(
         self, ip: str, port: int, event_types: Optional[List[str]] = None
     ):
+        """Forward events to another eventbus
+
+        Args:
+            ip (str): IP address of the eventbus
+            port (int): Port of the eventbus
+            event_types (Optional[List[str]], optional): Event types to forward. Defaults to None.
+
+        Examples:
+            >>> bus = EventBus()
+            >>> dbus = DEventBus()
+            >>> await bus.forward(dbus.ip, dbus.port, ["hello"])
+
+        """
         from ..entrypoint import DEntryPoint
 
         # Handle default event types
@@ -96,6 +116,13 @@ class EventBus(AEventBus):
         self._dentrypoints[f"{ip}:{port}"] = e
 
     async def deforward(self, ip: str, port: int):
+        """Remove forwarding to another eventbus
+
+        Args:
+            ip (str): IP address of the eventbus
+            port (int): Port of the eventbus
+
+        """
         # Remove handlers
         self._remove(f"{ip}:{port}")
 
@@ -104,6 +131,7 @@ class EventBus(AEventBus):
         del self._dentrypoints[f"{ip}:{port}"]
 
     async def close(self):
+        """Close the eventbus"""
         # Emit first to allow for cleanup
         await self._emit(Event("aiodistbus.eventbus.close"))
         self._running = False

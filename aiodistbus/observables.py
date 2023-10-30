@@ -1,3 +1,12 @@
+"""
+This module contains the ObservableDict and ObservableList classes.
+These classes are subclasses of the built-in dict and list classes,
+respectively, and they have the ability to call a callback function
+whenever the contents of the dict or list are changed.
+
+"""
+
+
 class ObservableDict(dict):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

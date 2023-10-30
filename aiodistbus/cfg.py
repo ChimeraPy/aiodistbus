@@ -14,6 +14,15 @@ DFunction = Callable[[bytes], T]
 
 
 class _GlobalConfig:
+    """Global configuration for serialization and deserialization
+
+    Examples:
+        >>> from aiodistbus import cfg
+        >>> cfg.global_config.encoders[pathlib.Path] = lambda x: str(x).encode()
+        >>> cfg.global_config.decoders[pathlib.Path] = lambda x: pathlib.Path(x.decode())
+
+    """
+
     def __init__(self):
         self.encoders: Dict[Union[Type, Optional[Type]], SFunction[Type]] = {
             str: lambda x: x.encode("utf-8"),
@@ -27,6 +36,18 @@ class _GlobalConfig:
         }
 
     def get_encoder(self, dtype: Union[Type, Optional[Type]]) -> SFunction[Type]:
+        """Get encoder for type
+
+        Args:
+            dtype (Union[Type, Optional[Type]]): Type to encode
+
+        Raises:
+            ValueError: If encoder not found
+
+        Returns:
+            SFunction[Type]: Encoder function
+
+        """
         if dtype in Json.__args__:  # type: ignore
             return self.encoders[Json]  # type: ignore
         elif dtype in self.encoders:
@@ -35,6 +56,18 @@ class _GlobalConfig:
             raise ValueError(f"Encoder not found for {dtype}")
 
     def get_decoder(self, dtype: Union[Type, Optional[Type]]) -> DFunction[Type]:
+        """Get decoder for type
+
+        Args:
+            dtype (Union[Type, Optional[Type]]): Type to decode
+
+        Raises:
+            ValueError: If decoder not found
+
+        Returns:
+            DFunction[Type]: Decoder function
+
+        """
         if dtype in Json.__args__:  # type: ignore
             return self.decoders[Json]  # type: ignore
         elif dtype in self.decoders:

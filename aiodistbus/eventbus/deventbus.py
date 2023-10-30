@@ -12,13 +12,30 @@ from ..cfg import EVENT_BLACKLIST
 from ..protocols import Event
 from ..timer import Timer
 from ..utils import reconstruct, verify_checksum, wildcard_search
+from .aeventbus import AEventBus
 from .eventbus import EventBus
 
 logger = logging.getLogger("aiodistbus")
 
 
-class DEventBus:
+class DEventBus(AEventBus):
+    """Distributed eventbus
+
+    This class is the distributed eventbus. This is the server in that
+    broadcasts events to all clients. It also handles the local eventbuses
+    and forwards events to them.
+
+    """
+
     def __init__(self, ip: str, port: int = 0, pulse: Union[float, int] = 15):
+        """Initialize the distributed eventbus
+
+        Args:
+            ip (str): IP address to bind to
+            port (int, optional): Port to bind to. Defaults to 0.
+            pulse (Union[float, int], optional): Pulse interval. Defaults to 15.
+
+        """
         super().__init__()
 
         # Parameters
@@ -156,11 +173,23 @@ class DEventBus:
     ####################################################################
 
     async def flush(self):
+        """Flush the eventbus"""
         self._flush_flag.clear()
         await self._flush_flag.wait()
 
     async def forward(self, bus: EventBus, event_types: Optional[List[str]] = None):
+        """Forward events to a local eventbus
 
+        Args:
+            bus (EventBus): Local eventbus
+            event_types (Optional[List[str]], optional): Event types to forward. Defaults to None.
+
+        Exapmles:
+            >>> bus = EventBus()
+            >>> dbus = DEventBus()
+            >>> await dbus.forward(bus, ["hello"])
+
+        """
         # Handle default event types
         if event_types is None:
             event_types = ["*"]
@@ -173,6 +202,7 @@ class DEventBus:
                 self._lbuses_subs[event_type].append(bus)
 
     async def close(self):
+        """Close the eventbus"""
 
         if self._running:
 

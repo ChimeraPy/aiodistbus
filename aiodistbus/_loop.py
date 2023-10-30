@@ -3,6 +3,7 @@ import sys
 
 
 def setup():
+    """Setup event loop policy according to platform"""
     if sys.platform in ["win32", "cygwin", "cli"]:
         import winloop
 
