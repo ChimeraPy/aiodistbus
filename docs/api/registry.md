@@ -1,0 +1,2 @@
+# Registry
+::: aiodistbus.registry.Registry

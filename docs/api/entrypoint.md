@@ -1,0 +1,2 @@
+# EntryPoint
+::: aiodistbus.entrypoint.EntryPoint
