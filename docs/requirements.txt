@@ -1,0 +1,9 @@
+mkdocs
+mkdocstrings[python]
+markdown-include
+asyncio-atexit
+pyzmq
+dataclasses-json
+aioreactive
+winloop; sys_platform == 'win32'
+uvloop; sys_platform != 'win32'

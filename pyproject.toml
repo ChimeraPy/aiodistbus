@@ -2,7 +2,7 @@
 [project]
 name = "aiodistbus"
 version = "0.0.1"
-description = "ZeroMQ Distributed EventBus: "
+description = "ZeroMQ Distributed EventBus for Python"
 authors = [
     {name = "Eduardo Davalos", email="eduardo.davalos.anaya@vanderbilt.edu"},
     {name = "Umesh Timalsina", email="umesh.timalsina@vanderbilt.edu"}
