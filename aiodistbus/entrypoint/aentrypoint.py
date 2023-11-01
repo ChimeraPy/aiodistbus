@@ -87,7 +87,9 @@ class AEntryPoint(ABC):
             return wrapper
 
     @abstractmethod
-    async def _update_handlers(self, event_type: Optional[str] = None):
+    async def _update_handlers(
+        self, event_type: Optional[str] = None, remove: bool = False
+    ):
         ...
 
     ####################################################################
@@ -141,6 +143,21 @@ class AEntryPoint(ABC):
             self._wildcards[event_type] = handler
 
         await self._update_handlers(event_type)
+
+    async def off(self, event_type: str):
+        """Remove a handler
+
+        Args:
+            event_type (str): Event type
+
+        """
+        # Track handlers (supporting wildcards)
+        if "*" not in event_type:
+            del self._handlers[event_type]
+        else:
+            del self._wildcards[event_type]
+
+        await self._update_handlers(event_type, remove=True)
 
     @abstractmethod
     async def emit(

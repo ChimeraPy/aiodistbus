@@ -19,9 +19,14 @@ class EntryPoint(AEntryPoint):
         self.block = block
         self._bus: Optional[EventBus] = None
 
-    async def _update_handlers(self, event_type: Optional[str] = None):
+    async def _update_handlers(
+        self, event_type: Optional[str] = None, remove: bool = False
+    ):
         if self._bus is None:
             return
+
+        if remove and event_type:
+            await self._bus._off(self.id, event_type)
 
         if event_type:
             if event_type in self._handlers:

@@ -95,17 +95,20 @@ class DEntryPoint(AEntryPoint):
                 if len(coros) > 0:
                     await asyncio.gather(*coros)
 
-    async def _update_handlers(self, event_type: Optional[str] = None):
+    async def _update_handlers(
+        self, event_type: Optional[str] = None, remove: bool = False
+    ):
         if not self.subscriber:
             return
 
+        if remove and event_type:
+            self.subscriber.setsockopt(zmq.UNSUBSCRIBE, event_type.encode("utf-8"))
+
         if event_type:
             self.subscriber.setsockopt(zmq.SUBSCRIBE, event_type.encode("utf-8"))
-            # logger.debug("SUBSCRIBER: Subscribed to %s", event_type)
         else:
             for event_type in self._handlers.keys():
                 self.subscriber.setsockopt(zmq.SUBSCRIBE, event_type.encode("utf-8"))
-                # logger.debug("SUBSCRIBER: Subscribed to %s", event_type)
 
     async def _pulse_sub(self):
         self.pulse_count += 1
@@ -120,7 +123,7 @@ class DEntryPoint(AEntryPoint):
 
         # If too many failures, close
         if self.pulse_fail > self.pulse_limit:
-            logger.error(f"aiodistbus: Pulse failure limit reached")
+            logger.error("aiodistbus: Pulse failure limit reached")
             if self._on_disrupt:
                 await self._on_disrupt()
             await self.close()

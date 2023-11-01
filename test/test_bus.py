@@ -71,3 +71,26 @@ async def test_local_bus_wildcard(bus, entrypoints):
     # Assert
     assert event.id in e1._received
     assert len(e1._received) == 1
+
+
+async def test_local_bus_off(bus, entrypoints):
+
+    # Create resources
+    e1, e2 = entrypoints
+
+    # Add funcs
+    await e1.on("test", func, ExampleEvent)
+
+    # Connect
+    await e1.connect(bus)
+    await e2.connect(bus)
+
+    # Remove
+    await e1.off("test")
+
+    # Send message
+    event = await e2.emit("test", ExampleEvent("Hello"))
+
+    # Assert
+    assert event.id not in e1._received
+    assert len(e1._received) == 0
