@@ -5,6 +5,7 @@ from .entrypoint import DEntryPoint, EntryPoint
 from .eventbus import DEventBus, EventBus
 from .protocols import Event
 from .registry import registry
+from .version import __version__
 from .wrapper import DataClassEvent, make_evented
 
 setup_log()

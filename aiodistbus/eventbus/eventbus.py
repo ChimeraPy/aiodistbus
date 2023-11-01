@@ -37,6 +37,13 @@ class EventBus(AEventBus):
             self._subs[handler.event_type][id] = sub
             self._dtypes[handler.event_type] = handler.dtype
 
+    async def _off(self, id: str, event_type: str):
+        if "*" in event_type:
+            del self._wildcard_subs[event_type][id]
+        else:
+            del self._subs[event_type][id]
+            del self._dtypes[event_type]
+
     def _remove(self, id: str):
         to_be_removed: List[str] = []
         for route, subs in self._subs.items():

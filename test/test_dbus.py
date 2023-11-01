@@ -104,3 +104,28 @@ async def test_dbus_emit_wildcard(dbus, dentrypoints):
     # Assert
     assert event1 and event1.id not in e1._received
     assert event2 and event2.id in e1._received
+
+
+async def test_dbus_off(dbus, dentrypoints):
+
+    # Create resources
+    e1, e2 = dentrypoints
+
+    # Add funcs
+    await e1.on("test", func, ExampleEvent)
+
+    # Connect
+    await e1.connect(dbus.ip, dbus.port)
+    await e2.connect(dbus.ip, dbus.port)
+
+    # Off
+    await e1.off("test")
+
+    # Send message
+    event1 = await e2.emit("test", ExampleEvent("Hello"))
+
+    # Need to flush
+    await dbus.flush()
+
+    # Assert
+    assert event1 and event1.id not in e1._received
