@@ -53,6 +53,26 @@ async def test_local_bus(bus, entrypoints, event_type, func, dtype, dtype_instan
     assert len(e1._received) == 1
 
 
+async def test_local_bus_null(bus, entrypoints):
+
+    # Create resources
+    e1, e2 = entrypoints
+
+    # Add funcs
+    await e1.on("test", func_none)
+
+    # Connect
+    await e1.connect(bus)
+    await e2.connect(bus)
+
+    # Send message
+    event = await e2.emit("test")
+
+    # Assert
+    assert event.id in e1._received
+    assert len(e1._received) == 1
+
+
 async def test_local_bus_wildcard(bus, entrypoints):
 
     # Create resources

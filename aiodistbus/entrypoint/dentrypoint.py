@@ -39,6 +39,51 @@ class DEntryPoint(AEntryPoint):
 
         asyncio_atexit.register(self.close)
 
+    async def snapshot_reactor(self):
+        assert self.snapshot, "SNAPSHOT socket not initialized"
+
+        msg = await self.snapshot.recv_multipart()
+        dmsg = msg[0].decode("utf-8")
+
+        if dmsg == "aiodistbus.eventbus.handshake":
+            self._connected.set()
+
+    async def subscriber_reactor(self):
+        assert self.subscriber, "SUB socket not initialized"
+
+        [topic, event, checksum] = await self.subscriber.recv_multipart()
+
+        # Before further processing, perform checksum
+        if not verify_checksum(event, checksum):
+            logger.error(f"aiodistbus: Checksum failed: {event.decode('utf-8')}")
+            return
+
+        topic = topic.decode("utf-8")
+        event = event.decode("utf-8")
+        # logger.debug(f"SUBSCRIBER: Received {topic} - {event} - {len(self._received)}")
+
+        # Reconstruct the data
+        if topic in self._handlers:
+            known_type = self._handlers[topic].dtype
+        else:
+            known_type = None
+        try:
+            event = await reconstruct(event, known_type)
+        except Exception as e:
+            logger.error(f"aiodistbus: Failed to reconstruct: {event} - {e}")
+            return
+
+        # Obtain the handlers
+        coros: List[Coroutine] = []
+        if topic in self._handlers:
+            coros.append(self._handlers[topic].function(event))
+        for match in wildcard_search(topic, self._wildcards.keys()):
+            coros.append(self._wildcards[match].function(event))
+
+        # Await the handlers
+        if len(coros) > 0:
+            await asyncio.gather(*coros)
+
     async def _run(self):
         assert self.subscriber, "SUB socket not initialized"
         assert self.snapshot, "SNAPSHOT socket not initialized"
@@ -53,47 +98,10 @@ class DEntryPoint(AEntryPoint):
                 continue
 
             if self.snapshot in events:
-                msg = await self.snapshot.recv_multipart()
-                dmsg = msg[0].decode("utf-8")
-
-                if dmsg == "aiodistbus.eventbus.handshake":
-                    self._connected.set()
+                await self.snapshot_reactor()
 
             if self.subscriber in events:
-                [topic, event, checksum] = await self.subscriber.recv_multipart()
-
-                # Before further processing, perform checksum
-                if not verify_checksum(event, checksum):
-                    logger.error(
-                        f"aiodistbus: Checksum failed: {event.decode('utf-8')}"
-                    )
-                    continue
-
-                topic = topic.decode("utf-8")
-                event = event.decode("utf-8")
-                # logger.debug(f"SUBSCRIBER: Received {topic} - {event} - {len(self._received)}")
-
-                # Reconstruct the data
-                if topic in self._handlers:
-                    known_type = self._handlers[topic].dtype
-                else:
-                    known_type = None
-                try:
-                    event = await reconstruct(event, known_type)
-                except Exception as e:
-                    logger.error(f"aiodistbus: Failed to reconstruct: {event} - {e}")
-                    continue
-
-                # Obtain the handlers
-                coros: List[Coroutine] = []
-                if topic in self._handlers:
-                    coros.append(self._handlers[topic].function(event))
-                for match in wildcard_search(topic, self._wildcards.keys()):
-                    coros.append(self._wildcards[match].function(event))
-
-                # Await the handlers
-                if len(coros) > 0:
-                    await asyncio.gather(*coros)
+                await self.subscriber_reactor()
 
     async def _update_handlers(
         self, event_type: Optional[str] = None, remove: bool = False
@@ -141,7 +149,7 @@ class DEntryPoint(AEntryPoint):
         return self._running
 
     async def emit(
-        self, event_type: str, data: Any, id: Optional[str] = None
+        self, event_type: str, data: Optional[Any] = None, id: Optional[str] = None
     ) -> Optional[Event]:
         """Emit an event
 
