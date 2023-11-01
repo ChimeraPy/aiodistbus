@@ -12,7 +12,7 @@ from aiodistbus import DEntryPoint, DEventBus
 logger = logging.getLogger("aiodistbus")
 
 N = 5
-M = 1000
+M = 100
 
 
 @dataclass
