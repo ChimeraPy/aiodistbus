@@ -56,7 +56,7 @@ class EntryPoint(AEntryPoint):
         await self._update_handlers()
 
     async def emit(
-        self, event_type: str, data: Any, id: Optional[str] = None
+        self, event_type: str, data: Optional[Any] = None, id: Optional[str] = None
     ) -> Optional[Event]:
         """Emit an event
 
