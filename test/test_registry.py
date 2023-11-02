@@ -25,7 +25,7 @@ async def func_str(event: str):
 @registry.on("test_bytes", bytes)
 async def func_bytes(event: bytes):
     assert isinstance(event, bytes)
-    logger.info(f"Received event {event}")
+    logger.info("Received event %s", event.decode("utf-8"))
 
 
 @registry.on("test_int", int)
@@ -48,7 +48,7 @@ async def func_bool(event: bool):
 
 @registry.on("test_none")
 async def func_none():
-    logger.info(f"Received event for None")
+    logger.info("Received event for None")
 
 
 @registry.on("test_dict", dict)
@@ -67,6 +67,19 @@ async def func_list(event: List[str]):
 async def wildcard_func(event: Event):
     assert isinstance(event, Event)
     logger.info(f"Received event {event}")
+
+
+class ExampleClass:
+    def __init__(self):
+        self.a = 1
+
+    @registry.on("setup", namespace="ExampleClass")
+    async def setup(self):
+        logger.debug(f"Setup called: {self.a}")
+
+    @registry.on("start", namespace="ExampleClass")
+    def start(self):
+        logger.debug(f"Start called: {self.a}")
 
 
 @pytest.mark.parametrize(
@@ -151,3 +164,25 @@ async def test_dbus_registry(dbus, dentrypoints, event_type, dtype_instance):
 
     # Assert
     assert event.id in e1._received
+
+
+async def test_registry_class(bus, entrypoints):
+
+    # Resources
+    e1, e2 = entrypoints
+
+    # Connect to bus
+    await e1.connect(bus)
+    await e2.connect(bus)
+
+    # Setup the handlers
+    instance = ExampleClass()
+    await e1.use(registry, b_args=[instance], namespace="ExampleClass")
+
+    # Emit the event
+    event1 = await e2.emit("setup")
+    event2 = await e2.emit("start")
+
+    # Asserts
+    assert event1.id in e1._received
+    assert event2.id in e1._received
