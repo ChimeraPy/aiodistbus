@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from collections import deque
 from typing import Any, Callable, Coroutine, Dict, List, Optional, Type
 
+from ..partial_func import create_async_callable, create_callable
 from ..protocols import Event, Handler
 from ..registry import Registry
 from ..utils import safe_coro
@@ -70,7 +71,13 @@ class AEntryPoint(ABC):
 
             try:
                 if unpack:
-                    func(event.data)
+                    if (
+                        type(event.data) is not type(None)
+                        and self._handlers[event.type].dtype
+                    ):
+                        func(event.data)
+                    else:
+                        func()
                 else:
                     func(event)
             except Exception as e:
@@ -96,17 +103,36 @@ class AEntryPoint(ABC):
     ## Public API
     ####################################################################
 
-    async def use(self, registry: Registry, namespace: str = "default"):
+    async def use(
+        self,
+        registry: Registry,
+        namespace: str = "default",
+        b_args: Optional[List[Any]] = None,
+        b_kwargs: Optional[Dict[str, Any]] = None,
+    ):
         """Use a registry
 
         Args:
             registry (Registry): Registry to use
             namespace (str, optional): Namespace. Defaults to "default".
+            b_args (Optional[List[Any]], optional): Base arguments. Defaults to None.
+            b_kwargs (Optional[Dict[str, Any]], optional): Base keyword arguments. Defaults to None.
 
         """
+        # Handling base arguments
+        b_args = b_args or []
+        b_kwargs = b_kwargs or {}
+
         # Obtain the handlers
         for event_type, handler in registry.get_handlers(namespace).items():
-            await self.on(event_type, handler.function, handler.dtype)
+            # Create a partial function
+            if asyncio.iscoroutinefunction(handler.function):
+                # partial_func = AsyncPartialFunc(handler.function, *args, **kwargs)
+                partial_func = create_async_callable(handler.function, b_args, b_kwargs)
+            else:
+                # partial_func = PartialFunc(handler.function, *args, **kwargs)
+                partial_func = create_callable(handler.function, b_args, b_kwargs)
+            await self.on(event_type, partial_func, handler.dtype)
 
     async def on(
         self,
