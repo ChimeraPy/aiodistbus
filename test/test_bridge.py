@@ -263,14 +263,14 @@ async def test_local_buses_comms_client_to_server(
     "event_type, func, dtype, dtype_instance",
     [
         ("test", func, ExampleEvent, ExampleEvent("Hello")),
-        # ("test_str", func_str, str, "Hello"),
-        # ("test_bytes", func_bytes, bytes, b"Hello"),
-        # ("test_list", func_list, List, ["Hello"]),
-        # ("test_int", func_int, int, 1),
-        # ("test_float", func_float, float, 1.0),
-        # ("test_bool", func_bool, bool, True),
-        # ("test_none", func_none, None, None),
-        # ("test_dict", func_dict, dict, {"hello": "world"}),
+        ("test_str", func_str, str, "Hello"),
+        ("test_bytes", func_bytes, bytes, b"Hello"),
+        ("test_list", func_list, List, ["Hello"]),
+        ("test_int", func_int, int, 1),
+        ("test_float", func_float, float, 1.0),
+        ("test_bool", func_bool, bool, True),
+        ("test_none", func_none, None, None),
+        ("test_dict", func_dict, dict, {"hello": "world"}),
     ],
 )
 async def test_local_buses_comms_bidirectional(event_type, func, dtype, dtype_instance):
