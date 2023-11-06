@@ -46,7 +46,7 @@ class AEntryPoint(ABC):
             if unpack:
                 if (
                     type(event.data) is not type(None)
-                    and self._handlers[event.type].dtype
+                    and event.dtype != "builtins.NoneType"
                 ):
                     coro = func(event.data)
                 else:
@@ -140,6 +140,7 @@ class AEntryPoint(ABC):
         func: Callable,
         dtype: Optional[Type] = None,
         create_task: bool = False,
+        unpack: bool = True,
     ):
         """Register a handler
 
@@ -160,7 +161,7 @@ class AEntryPoint(ABC):
         """
         # Track handlers (supporting wildcards)
         if "*" not in event_type:
-            wrapped_func = self._wrapper(func, create_task=create_task)
+            wrapped_func = self._wrapper(func, unpack=unpack, create_task=create_task)
             handler = Handler(event_type, wrapped_func, dtype)
             self._handlers[event_type] = handler
         else:

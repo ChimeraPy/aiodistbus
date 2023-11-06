@@ -47,6 +47,10 @@ async def afaulty_func(event: ExampleEvent):
     raise RuntimeError("Oh snap, something failed :'(")
 
 
+async def incorrect_args_func():
+    logger.error("This shouldn't run!")
+
+
 ################################################################################
 ## Tests
 ################################################################################
@@ -189,3 +193,20 @@ async def test_exception_in_decoder(dbus, dentrypoints):
 
     # Need to flush
     await dbus.flush()
+
+
+async def test_incorrect_handler_args(bus, entrypoints):
+
+    # Create resources
+    e1, e2 = entrypoints
+
+    # Add funcs
+    await e1.on("faulty", incorrect_args_func, ExampleEvent)
+
+    # Connect
+    await e1.connect(bus)
+    await e2.connect(bus)
+
+    # Send message
+    with pytest.raises(TypeError):
+        _ = await e2.emit("faulty", ExampleEvent("hello"))
