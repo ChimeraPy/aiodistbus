@@ -134,10 +134,7 @@ async def reconstruct(event_str: str, dtype: Optional[Type] = None) -> Event:
         event = reconstruct_event_data(event, dtype)
     elif event.dtype and event.dtype != "builtins.NoneType":
         l_dtype = locate(event.dtype)
-        if l_dtype is type:
-            event = reconstruct_event_data(event, l_dtype)
-        else:
-            logger.error(f"Could not find type {event.dtype}")
+        event = reconstruct_event_data(event, l_dtype)  # type: ignore
 
     return event
 
