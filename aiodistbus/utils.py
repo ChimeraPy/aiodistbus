@@ -1,5 +1,6 @@
 import logging
 import zlib
+from pydoc import locate
 from typing import Any, Coroutine, Iterable, List, Optional, Type
 
 from dataclasses_json import DataClassJsonMixin
@@ -105,7 +106,7 @@ def reconstruct_event_data(event: Event, dtype: Type) -> Event:
 
     """
     if hasattr(dtype, "__annotations__"):
-        decoder = lambda x: dtype.from_json(bytes(x).decode())
+        decoder = lambda x: dtype.from_json(bytes(x).decode())  # noqa: E731
     else:
         try:
             decoder = global_config.get_decoder(dtype)
@@ -131,6 +132,13 @@ async def reconstruct(event_str: str, dtype: Optional[Type] = None) -> Event:
     event = decode(event_str)  # str -> Event
     if dtype:
         event = reconstruct_event_data(event, dtype)
+    elif event.dtype and event.dtype != "builtins.NoneType":
+        l_dtype = locate(event.dtype)
+        if l_dtype is type:
+            event = reconstruct_event_data(event, l_dtype)
+        else:
+            logger.error(f"Could not find type {event.dtype}")
+
     return event
 
 
@@ -151,7 +159,7 @@ def encode(data: Any) -> bytes:
     """
     # Serialize the data
     if isinstance(data, DataClassJsonMixin):
-        encoder = lambda x: x.to_json().encode("utf-8")
+        encoder = lambda x: x.to_json().encode("utf-8")  # noqa: E731
     else:
         encoder = global_config.get_encoder(type(data))
 

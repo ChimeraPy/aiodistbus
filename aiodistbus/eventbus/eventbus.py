@@ -22,9 +22,10 @@ class EventBus(AEventBus):
 
     """
 
-    def __init__(self):
+    def __init__(self, debug: bool = False):
         super().__init__()
         self._running = True
+        self._debug = debug
         self._wildcard_subs: Dict[str, Dict[str, Subscriptions]] = defaultdict(dict)
         self._dtypes: Dict[str, Union[Type, None]] = {}
         self._dentrypoints: Dict[str, DEntryPoint] = {}
@@ -70,6 +71,10 @@ class EventBus(AEventBus):
     async def _emit(self, event: Event):
 
         coros: List[Coroutine] = []
+
+        # Debug
+        if self._debug:
+            logger.debug(f"aiodistbus: Event={event}")
 
         # Handle wildcard subscriptions
         for match in wildcard_search(event.type, self._wildcard_subs.keys()):
@@ -136,6 +141,28 @@ class EventBus(AEventBus):
         # Remove entrypoint
         await self._dentrypoints[f"{ip}:{port}"].close()
         del self._dentrypoints[f"{ip}:{port}"]
+
+    async def listen(self, ip: str, port: int, event_types: Optional[List[str]] = None):
+        from ..entrypoint import DEntryPoint
+
+        # Handle default event types
+        if event_types is None:
+            event_types = ["*"]
+
+        # Create entrypoint
+        e = DEntryPoint()
+        await e.connect(ip, port)
+        for event_type in event_types:
+
+            # import pdb; pdb.set_trace()
+
+            async def _wrapper(event):
+                await self._emit(event)
+
+            await e.on(event_type, _wrapper, unpack=False)
+
+        # Store the entrypoint
+        self._dentrypoints[f"{ip}:{port}"] = e
 
     async def close(self):
         """Close the eventbus"""

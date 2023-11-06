@@ -10,6 +10,7 @@ from dataclasses_json import DataClassJsonMixin
 class Event(DataClassJsonMixin):
     type: str
     data: Optional[Any] = None
+    dtype: Optional[str] = None
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
 

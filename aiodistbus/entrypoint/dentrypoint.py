@@ -113,10 +113,19 @@ class DEntryPoint(AEntryPoint):
             self.subscriber.setsockopt(zmq.UNSUBSCRIBE, event_type.encode("utf-8"))
 
         if event_type:
-            self.subscriber.setsockopt(zmq.SUBSCRIBE, event_type.encode("utf-8"))
+            if "*" in event_type:
+                topic = event_type.replace(".*", "")
+                topic = topic.replace("*", "")
+                self.subscriber.setsockopt(zmq.SUBSCRIBE, topic.encode("utf-8"))
+            else:
+                self.subscriber.setsockopt(zmq.SUBSCRIBE, event_type.encode("utf-8"))
         else:
             for event_type in self._handlers.keys():
                 self.subscriber.setsockopt(zmq.SUBSCRIBE, event_type.encode("utf-8"))
+            for event_type in self._wildcards.keys():
+                topic = event_type.replace(".*", "")
+                topic = topic.replace("*", "")
+                self.subscriber.setsockopt(zmq.SUBSCRIBE, topic.encode("utf-8"))
 
     async def _pulse_sub(self):
         self.pulse_count += 1
@@ -168,16 +177,20 @@ class DEntryPoint(AEntryPoint):
 
         # Encode data
         try:
-            data = encode(data)
+            encoded_data = encode(data)
         except ValueError:
             logger.error(f"aiodistbus: Failed to encode: {data}")
             return None
 
+        # Obtain the dtype and format it
+        dtype = type(data)
+        dtype_str = f"{dtype.__module__}.{dtype.__name__}"
+
         # Package data with an Event object
         if id:
-            event = Event(event_type, data, id=id)
+            event = Event(event_type, encoded_data, dtype=dtype_str, id=id)
         else:
-            event = Event(event_type, data)
+            event = Event(event_type, encoded_data, dtype=dtype_str)
 
         # Serliaze the event
         serialized_event = event.to_json().encode()
