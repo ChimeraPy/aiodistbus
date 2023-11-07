@@ -1,6 +1,5 @@
 import pathlib
 from dataclasses import dataclass
-from typing import Optional
 
 import pytest
 from dataclasses_json import DataClassJsonMixin
@@ -13,7 +12,7 @@ from .conftest import ExampleEvent
 
 @dataclass
 class ExampleEventWithPathlib(DataClassJsonMixin):
-    path: Optional[pathlib.Path]
+    path: pathlib.Path
 
 
 async def test_encode_dataclass_with_pathlib():
