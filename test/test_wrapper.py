@@ -49,6 +49,7 @@ async def test_make_evented(bus, entrypoints):
 
     # Create the evented class
     data = make_evented(SomeClass(number=1, string="hello"), bus=bus)
+    logger.debug(type(data))
 
     # Trigger an event by changing the class
     data.number = 2

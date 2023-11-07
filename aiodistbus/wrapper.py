@@ -104,6 +104,7 @@ def make_evented(
     """
     instance.bus = bus  # type: ignore[attr-defined]
     instance.__evented_values = {}  # type: ignore[attr-defined]
+    instance.__dataclass = f"{instance.__class__.__module__}.{instance.__class__.__name__}"  # type: ignore[attr-defined]
 
     # Name of the event
     if not event_name:

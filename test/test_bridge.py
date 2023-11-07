@@ -283,18 +283,18 @@ async def test_local_buses_comms_bidirectional(event_type, func, dtype, dtype_in
     # Create entrypoint
     ce = EntryPoint()
     await ce.connect(cb)
-    await ce.on(f"client.{event_type}", func, dtype)
+    await ce.on(f"server.{event_type}", func, dtype)
     se = EntryPoint()
     await se.connect(sb)
-    await se.on(f"server.{event_type}", func, dtype)
+    await se.on(f"client.{event_type}", func, dtype)
 
     # Link
-    await cb.link(sdbus.ip, sdbus.port, ["server.*"], ["client.*"])
-    await sb.link(sdbus.ip, sdbus.port, ["client.*"], ["server.*"])
+    await cb.link(sdbus.ip, sdbus.port, ["client.*"], ["server.*"])
+    await sb.link(sdbus.ip, sdbus.port, ["server.*"], ["client.*"])
 
     # Send message
-    cevent = await ce.emit(f"server.{event_type}", dtype_instance)
-    sevent = await se.emit(f"client.{event_type}", dtype_instance)
+    cevent = await ce.emit(f"client.{event_type}", dtype_instance)
+    sevent = await se.emit(f"server.{event_type}", dtype_instance)
 
     # Flush
     await sdbus.flush()
