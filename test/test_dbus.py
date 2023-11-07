@@ -3,7 +3,7 @@ from typing import List
 
 import pytest
 
-from aiodistbus import DEntryPoint, Event
+from aiodistbus import DEntryPoint, Event, make_evented
 
 from .conftest import (
     ExampleEvent,
@@ -73,6 +73,29 @@ async def test_dbus_emit(dbus, dentrypoints, event_type, func, dtype, dtype_inst
 
     # Send message
     event1 = await e2.emit(event_type, dtype_instance)
+
+    # Need to flush
+    await dbus.flush()
+
+    # Assert
+    assert event1 and event1.id in e1._received
+
+
+async def test_dbus_emit_evented_dataclass(bus, dbus, dentrypoints):
+
+    # Create resources
+    e1, e2 = dentrypoints
+
+    # Add funcs
+    await e1.on("test", func, ExampleEvent)
+
+    # Connect
+    await e1.connect(dbus.ip, dbus.port)
+    await e2.connect(dbus.ip, dbus.port)
+
+    # Send message
+    instance = make_evented(ExampleEvent("Hello"), bus=bus)
+    event1 = await e2.emit("test", instance)
 
     # Need to flush
     await dbus.flush()

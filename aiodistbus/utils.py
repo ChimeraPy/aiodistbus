@@ -133,6 +133,10 @@ async def reconstruct(event_str: str, dtype: Optional[Type] = None) -> Event:
     if dtype:
         event = reconstruct_event_data(event, dtype)
     elif event.dtype and event.dtype != "builtins.NoneType":
+        # Handle dtype mapping
+        dtype_mapping = global_config.get_dtype_mapping(event.dtype)
+        if dtype_mapping:
+            event.dtype = dtype_mapping
         l_dtype = locate(event.dtype)
         event = reconstruct_event_data(event, l_dtype)  # type: ignore
 

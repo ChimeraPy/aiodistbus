@@ -1,5 +1,17 @@
 import json
+import pathlib
 from typing import Callable, Dict, List, Optional, Type, TypeVar, Union
+
+import dataclasses_json.cfg
+
+dataclasses_json.cfg.global_config.encoders[pathlib.Path] = str
+dataclasses_json.cfg.global_config.decoders[
+    pathlib.Path
+] = pathlib.Path  # is this necessary?
+dataclasses_json.cfg.global_config.encoders[Optional[pathlib.Path]] = str
+dataclasses_json.cfg.global_config.decoders[Optional[pathlib.Path]] = Optional[
+    pathlib.Path
+]  # is this necessary?
 
 T = TypeVar("T")
 
@@ -34,6 +46,7 @@ class _GlobalConfig:
             bytes: lambda x: x,
             Json: lambda x: json.loads(x.decode()),
         }
+        self.dtype_map: Dict[str, str] = {}
 
     def get_encoder(self, dtype: Union[Type, Optional[Type]]) -> SFunction[Type]:
         """Get encoder for type
@@ -74,6 +87,29 @@ class _GlobalConfig:
             return self.decoders[dtype]
         else:
             raise ValueError(f"Decoder not found for {dtype}")
+
+    def set_dtype_mapping(self, k: str, v: str):
+        """Set dtype mapping
+
+        Args:
+            dtype (str): dtype
+
+        """
+        self.dtype_map[k] = v
+
+    def get_dtype_mapping(self, dtype: str) -> Optional[str]:
+        """Get dtype mapping
+
+        Args:
+            dtype (str): dtype
+
+        Returns:
+            str: dtype
+
+        """
+        if dtype in self.dtype_map:
+            return self.dtype_map[dtype]
+        return None
 
 
 global_config = _GlobalConfig()

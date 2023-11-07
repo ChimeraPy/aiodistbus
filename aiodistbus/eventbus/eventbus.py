@@ -154,8 +154,6 @@ class EventBus(AEventBus):
         await e.connect(ip, port)
         for event_type in event_types:
 
-            # import pdb; pdb.set_trace()
-
             async def _wrapper(event):
                 await self._emit(event)
 
@@ -168,11 +166,11 @@ class EventBus(AEventBus):
         self,
         ip: str,
         port: int,
-        to_event_types: Optional[List[str]] = None,
-        from_event_types: Optional[List[str]] = None,
+        send: Optional[List[str]] = None,
+        recv: Optional[List[str]] = None,
     ):
-        await self.listen(ip, port, event_types=from_event_types)
-        await self.forward(ip, port, event_types=to_event_types)
+        await self.forward(ip, port, event_types=send)
+        await self.listen(ip, port, event_types=recv)
 
     async def close(self):
         """Close the eventbus"""
