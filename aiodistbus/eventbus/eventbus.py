@@ -164,6 +164,16 @@ class EventBus(AEventBus):
         # Store the entrypoint
         self._dentrypoints[f"{ip}:{port}"] = e
 
+    async def link(
+        self,
+        ip: str,
+        port: int,
+        to_event_types: Optional[List[str]] = None,
+        from_event_types: Optional[List[str]] = None,
+    ):
+        await self.listen(ip, port, event_types=from_event_types)
+        await self.forward(ip, port, event_types=to_event_types)
+
     async def close(self):
         """Close the eventbus"""
         # Emit first to allow for cleanup
